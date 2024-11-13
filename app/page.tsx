@@ -74,7 +74,7 @@ export default function BreakoutRoomSimulator() {
     setParticipants((prevParticipants) =>
       prevParticipants.map((p) => {
         if (p.id === step.participantId) {
-          let updatedParticipant = { ...p }
+          const updatedParticipant = { ...p }
           if (step.action === 'toggleCamera') {
             updatedParticipant.cameraOn = !p.cameraOn
             updatedParticipant.cameraToggles++
@@ -128,7 +128,7 @@ export default function BreakoutRoomSimulator() {
       `${step.action}${step.message ? `: "${step.message}"` : ''}`
     )
     setCurrentStep((prevStep) => prevStep + 1)
-  }, [currentStep, participants, simulationSteps])
+  }, [currentStep, participants])
 
   // Handler to play the simulation automatically
   const handlePlaySimulation = () => {
@@ -144,7 +144,7 @@ export default function BreakoutRoomSimulator() {
       setIsPlaying(false)
     }
     return () => clearTimeout(timer)
-  }, [isPlaying, currentStep, handleNextStep, simulationSteps])
+  }, [isPlaying, currentStep, handleNextStep])
 
   // Effect to auto-scroll the messages area
   useEffect(() => {
