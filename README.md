@@ -44,7 +44,7 @@ Common challenges we're addressing:
 
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/breaking-the-ice.git
+git clone https://github.com/matiashoyld/icebreakers.git
 cd breaking-the-ice
 
 # Install dependencies
