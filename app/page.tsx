@@ -248,7 +248,7 @@ export default function BreakoutRoomSimulator() {
               <CardContent className='flex-1 overflow-hidden pt-6'>
                 {!hasStarted ? (
                   <div className='h-full flex flex-col'>
-                    <div className='h-full flex flex-col max-w-2xl mx-auto w-full'>
+                    <div className='h-full flex flex-col mx-auto w-full'>
                       <div className='space-y-2'>
                         <h3 className='font-semibold text-2xl'>
                           Set the Context
