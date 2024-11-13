@@ -5,12 +5,23 @@ import { extractFirstJsonDict } from '@/lib/utils/json-parsers'
 import { NextResponse } from 'next/server'
 import OpenAI from 'openai'
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY, // Note: No NEXT_PUBLIC_ prefix
-})
+// Move client initialization inside the handler
+async function getOpenAIClient() {
+  const apiKey = process.env.OPENAI_API_KEY
+
+  if (!apiKey) {
+    throw new Error('OpenAI API key is not configured in environment variables')
+  }
+
+  return new OpenAI({
+    apiKey: apiKey,
+  })
+}
 
 export async function POST(request: Request) {
   try {
+    const openai = await getOpenAIClient()
+
     const body = await request.json()
     const { context, currentParticipantId } = body as {
       context: SimulationContext
@@ -41,7 +52,7 @@ export async function POST(request: Request) {
 
     // Get response from OpenAI
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'gpt-4o-mini', // Updated to use a valid model name
       messages: [{ role: 'user', content: filledPrompt }],
       max_tokens: 1500,
       temperature: 0.7,
@@ -69,7 +80,11 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Error in simulation API:', error)
     return NextResponse.json(
-      { error: 'Failed to process simulation step' },
+      {
+        error:
+          'Failed to process simulation step: ' +
+          (error instanceof Error ? error.message : 'Unknown error'),
+      },
       { status: 500 }
     )
   }
