@@ -3,6 +3,7 @@ export const TURN_PROMPT = `
 !<INPUT 0>!: Information about the agent persona
 !<INPUT 1>!: Context of the conversation (participants, camera status)
 !<INPUT 2>!: Dialogue history
+!<INPUT 3>!: Conversation context/topic
 
 [Output]
 Output format -- output your response in json with the following fields:
@@ -20,8 +21,9 @@ Consider the following when making your decision:
 1. Your personality traits and tendencies from the agent description
 2. The current conversation context - who is present and who has their camera on
 3. The flow and content of the dialogue so far
-4. Whether the current topic or situation would interest someone with your personality
-5. Whether you feel compelled to speak, turn your camera on/off, or simply observe
+4. The given conversation topic and objectives
+5. Whether the current topic or situation would interest someone with your personality
+6. Whether you feel compelled to speak, turn your camera on/off, or simply observe
 
 Agent description:
 <agent_description>
@@ -38,7 +40,12 @@ Dialogue history:
 !<INPUT 2>!
 </dialogue_history>
 
-Based on the above information, decide on your next action. If you choose to speak, ensure your message matches your personality and fits naturally in the conversation.
+Topic and objectives:
+<topic>
+!<INPUT 3>!
+</topic>
+
+Based on the above information, decide on your next action. If you choose to speak, ensure your message matches your personality and fits naturally in the conversation while staying relevant to the given topic and objectives.
 
 Output your response in json with the following fields:
 {

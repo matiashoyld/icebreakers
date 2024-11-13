@@ -7,6 +7,7 @@ type SimulationContext = {
   participants: Participant[]
   currentTurn: number
   dialogueHistory: string[]
+  conversationContext: string
 }
 
 export async function getNextSimulationStep(
@@ -26,7 +27,12 @@ export async function getNextSimulationStep(
 
   // Generate prompt using the template
   const filledPrompt = await generatePrompt(
-    [agentPersona, participantsContext, dialogueString],
+    [
+      agentPersona,
+      participantsContext,
+      dialogueString,
+      context.conversationContext,
+    ],
     TURN_PROMPT
   )
 

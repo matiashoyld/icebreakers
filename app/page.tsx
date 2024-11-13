@@ -15,7 +15,7 @@ import {
 import { Progress } from '@/components/ui/progress'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
-
+import { Textarea } from '@/components/ui/textarea'
 // Icons
 import {
   Activity,
@@ -53,6 +53,8 @@ export default function BreakoutRoomSimulator() {
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const [dialogueHistory, setDialogueHistory] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [conversationContext, setConversationContext] = useState('')
+  const [hasStarted, setHasStarted] = useState(false)
 
   // Function to get the latest engagement score for a participant
   const getLatestEngagement = (participantId: number) => {
@@ -68,6 +70,11 @@ export default function BreakoutRoomSimulator() {
     setIsLoading(true)
 
     try {
+      // Start the simulation if it hasn't started
+      if (!hasStarted) {
+        setHasStarted(true)
+      }
+
       // Determine which participant's turn it is
       const currentParticipantId = (currentStep % participants.length) + 1
 
@@ -77,6 +84,7 @@ export default function BreakoutRoomSimulator() {
           participants,
           currentTurn: currentStep,
           dialogueHistory,
+          conversationContext,
         },
         currentParticipantId
       )
@@ -148,7 +156,15 @@ export default function BreakoutRoomSimulator() {
     } finally {
       setIsLoading(false)
     }
-  }, [currentStep, participants, messages, dialogueHistory, isLoading])
+  }, [
+    currentStep,
+    participants,
+    messages,
+    dialogueHistory,
+    isLoading,
+    conversationContext,
+    hasStarted,
+  ])
 
   // Handler to play the simulation automatically
   const handlePlaySimulation = () => {
@@ -224,44 +240,68 @@ export default function BreakoutRoomSimulator() {
             </div>
             {/* Dialogue Section */}
             <Card className='flex-1 flex flex-col overflow-hidden shadow-none'>
-              <CardHeader className='flex-none'>
-                <CardTitle>Dialogue</CardTitle>
-              </CardHeader>
-              <CardContent className='flex-1 overflow-hidden p-4'>
-                <ScrollArea
-                  className='h-full w-full pr-4'
-                  ref={scrollAreaRef}
-                  scrollHideDelay={0}
-                >
-                  {messages.map((message) => {
-                    const participant = participants.find(
-                      (p) => p.id === message.participantId
-                    )!
-                    return (
-                      <div
-                        key={message.id}
-                        className='flex items-start space-x-4 mb-4'
-                      >
-                        <Avatar className='h-10 w-10'>
-                          <AvatarImage
-                            src={participant.avatar}
-                            alt={participant.name}
-                            className='object-cover'
-                          />
-                          <AvatarFallback>{participant.name[0]}</AvatarFallback>
-                        </Avatar>
-                        <div className='space-y-1'>
-                          <p className='text-sm font-medium leading-none'>
-                            {participant.name}
-                          </p>
-                          <p className='text-sm text-muted-foreground'>
-                            {message.content}
-                          </p>
-                        </div>
+              <CardContent className='flex-1 overflow-hidden pt-6'>
+                {!hasStarted ? (
+                  <div className='h-full flex flex-col'>
+                    <div className='h-full flex flex-col max-w-2xl mx-auto w-full'>
+                      <div className='space-y-2'>
+                        <h3 className='font-semibold text-2xl'>
+                          Set the Context
+                        </h3>
+                        <p className='text-sm text-muted-foreground'>
+                          Describe the situation and what the participants
+                          should discuss. This will help guide their
+                          conversation.
+                        </p>
                       </div>
-                    )
-                  })}
-                </ScrollArea>
+                      <Textarea
+                        className='flex-1 resize-none text-base mt-3'
+                        placeholder='Example: This is a team meeting to discuss the upcoming product launch. The team needs to decide on the launch date and marketing strategy.'
+                        value={conversationContext}
+                        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                          setConversationContext(e.target.value)
+                        }
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <ScrollArea
+                    className='h-full w-full pr-4'
+                    ref={scrollAreaRef}
+                    scrollHideDelay={0}
+                  >
+                    {messages.map((message) => {
+                      const participant = participants.find(
+                        (p) => p.id === message.participantId
+                      )!
+                      return (
+                        <div
+                          key={message.id}
+                          className='flex items-start space-x-4 mb-4'
+                        >
+                          <Avatar className='h-10 w-10'>
+                            <AvatarImage
+                              src={participant.avatar}
+                              alt={participant.name}
+                              className='object-cover'
+                            />
+                            <AvatarFallback>
+                              {participant.name[0]}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className='space-y-1'>
+                            <p className='text-sm font-medium leading-none'>
+                              {participant.name}
+                            </p>
+                            <p className='text-sm text-muted-foreground'>
+                              {message.content}
+                            </p>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </ScrollArea>
+                )}
               </CardContent>
             </Card>
           </CardContent>
@@ -269,9 +309,15 @@ export default function BreakoutRoomSimulator() {
           <CardFooter className='flex justify-between items-center'>
             <Button
               onClick={() => handleNextStep()}
-              disabled={isPlaying || isLoading}
+              disabled={
+                isPlaying ||
+                isLoading ||
+                (!hasStarted && !conversationContext.trim())
+              }
             >
-              {isLoading ? (
+              {!hasStarted ? (
+                'Start Simulation'
+              ) : isLoading ? (
                 'Processing...'
               ) : (
                 <>
@@ -282,7 +328,7 @@ export default function BreakoutRoomSimulator() {
             <div className='text-sm font-medium'>Turn: {currentStep}</div>
             <Button
               onClick={handlePlaySimulation}
-              disabled={isPlaying || isLoading}
+              disabled={isPlaying || isLoading || !hasStarted}
             >
               <Play className='mr-2 h-4 w-4' /> Play Simulation
             </Button>
