@@ -1,7 +1,8 @@
 import OpenAI from 'openai'
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
+  dangerouslyAllowBrowser: true,
 })
 
 /**
@@ -59,7 +60,7 @@ export async function generatePrompt(
  */
 export async function gptRequest(
   prompt: string,
-  model: string = 'gpt-4',
+  model: string = 'gpt-4o-mini',
   maxTokens: number = 1500
 ): Promise<string> {
   try {

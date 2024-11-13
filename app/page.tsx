@@ -35,8 +35,9 @@ import {
   ENGAGEMENT_CHART_COLOR,
   getEngagementScore,
 } from '@/app/constants/constants'
-import { initialParticipants, simulationSteps } from '@/app/data/data'
+import { initialParticipants } from '@/app/data/data'
 import { EngagementData, Message, Participant } from '@/app/types/types'
+import { getNextSimulationStep } from '@/lib/simulation/simulation-manager'
 
 export default function BreakoutRoomSimulator() {
   // State variables
@@ -50,6 +51,8 @@ export default function BreakoutRoomSimulator() {
   const [isPlaying, setIsPlaying] = useState(false)
   const [engagementData, setEngagementData] = useState<EngagementData[]>([])
   const scrollAreaRef = useRef<HTMLDivElement>(null)
+  const [dialogueHistory, setDialogueHistory] = useState<string[]>([])
+  const [isLoading, setIsLoading] = useState(false)
 
   // Function to get the latest engagement score for a participant
   const getLatestEngagement = (participantId: number) => {
@@ -59,92 +62,109 @@ export default function BreakoutRoomSimulator() {
     return participantData[0]?.engagement ?? 0
   }
 
-  // Memoize handleNextStep with useCallback
-  const handleNextStep = useCallback(() => {
-    if (currentStep >= simulationSteps.length) {
-      setIsPlaying(false)
-      return
-    }
+  // Modify handleNextStep to be async and use the LLM
+  const handleNextStep = useCallback(async () => {
+    if (isLoading) return
+    setIsLoading(true)
 
-    const step = simulationSteps[currentStep]
-    const currentParticipant = participants.find(
-      (p) => p.id === step.participantId
-    )!
+    try {
+      // Determine which participant's turn it is
+      const currentParticipantId = (currentStep % participants.length) + 1
 
-    setParticipants((prevParticipants) =>
-      prevParticipants.map((p) => {
-        if (p.id === step.participantId) {
-          const updatedParticipant = { ...p }
-          if (step.action === 'toggleCamera') {
-            updatedParticipant.cameraOn = !p.cameraOn
-            updatedParticipant.cameraToggles++
-          } else if (step.action === 'speak' && step.message) {
-            updatedParticipant.wordsSpoken += step.message.split(' ').length
-          } else if (step.action === 'doNothing') {
-            updatedParticipant.timesDoingNothing++
-          }
-
-          const participatedTurns = simulationSteps
-            .slice(0, currentStep + 1)
-            .filter(
-              (s) =>
-                s.participantId === p.id &&
-                (s.action === 'speak' || s.action === 'toggleCamera')
-            ).length
-
-          updatedParticipant.participationRate =
-            participatedTurns / (currentStep + 1)
-
-          return updatedParticipant
-        }
-        return p
-      })
-    )
-
-    if (step.action === 'speak' && step.message) {
-      setMessages((prevMessages) => [
-        ...prevMessages,
+      // Get next step from LLM
+      const step = await getNextSimulationStep(
         {
-          id: prevMessages.length + 1,
+          participants,
+          currentTurn: currentStep,
+          dialogueHistory,
+        },
+        currentParticipantId
+      )
+
+      // Update participants state
+      setParticipants((prevParticipants) =>
+        prevParticipants.map((p) => {
+          if (p.id === step.participantId) {
+            const updatedParticipant = { ...p }
+            if (step.action === 'toggleCamera') {
+              updatedParticipant.cameraOn = !p.cameraOn
+              updatedParticipant.cameraToggles++
+            } else if (step.action === 'speak' && step.message) {
+              updatedParticipant.wordsSpoken += step.message.split(' ').length
+            } else if (step.action === 'doNothing') {
+              updatedParticipant.timesDoingNothing++
+            }
+
+            const participatedTurns = currentStep + 1
+            updatedParticipant.participationRate =
+              participatedTurns / (currentStep + 1)
+
+            return updatedParticipant
+          }
+          return p
+        })
+      )
+
+      // Update messages if the agent spoke
+      if (step.action === 'speak' && step.message) {
+        const newMessage = {
+          id: messages.length + 1,
           participantId: step.participantId,
-          content: step.message!,
+          content: step.message,
+        }
+        setMessages((prev) => [...prev, newMessage])
+        setDialogueHistory((prev) => [
+          ...prev,
+          `${participants.find((p) => p.id === step.participantId)?.name}: ${
+            step.message
+          }`,
+        ])
+      }
+
+      // Update current thinking and agent
+      setCurrentThinking(step.thinking || '')
+      setCurrentAgent(
+        participants.find((p) => p.id === step.participantId) || null
+      )
+      setCurrentDecision(
+        `${step.action}${step.message ? `: "${step.message}"` : ''}`
+      )
+
+      // Update engagement data
+      const newEngagement = getEngagementScore()
+      setEngagementData((prevData) => [
+        ...prevData,
+        {
+          turn: currentStep + 1,
+          engagement: newEngagement,
+          agentId: step.participantId,
         },
       ])
+
+      // Increment step
+      setCurrentStep((prev) => prev + 1)
+    } catch (error) {
+      console.error('Error in simulation step:', error)
+    } finally {
+      setIsLoading(false)
     }
-
-    const newEngagement = getEngagementScore()
-    setEngagementData((prevData) => [
-      ...prevData,
-      {
-        turn: currentStep + 1,
-        engagement: newEngagement,
-        agentId: step.participantId,
-      },
-    ])
-
-    setCurrentThinking(step.thinking || '')
-    setCurrentAgent(currentParticipant)
-    setCurrentDecision(
-      `${step.action}${step.message ? `: "${step.message}"` : ''}`
-    )
-    setCurrentStep((prevStep) => prevStep + 1)
-  }, [currentStep, participants])
+  }, [currentStep, participants, messages, dialogueHistory, isLoading])
 
   // Handler to play the simulation automatically
   const handlePlaySimulation = () => {
     setIsPlaying(true)
   }
 
-  // Update the useEffect to include handleNextStep in dependencies
+  // Modify the play simulation useEffect to handle async
   useEffect(() => {
     let timer: NodeJS.Timeout
-    if (isPlaying && currentStep < simulationSteps.length) {
-      timer = setTimeout(handleNextStep, 2000)
-    } else if (currentStep >= simulationSteps.length) {
-      setIsPlaying(false)
+    if (isPlaying && !isLoading) {
+      timer = setTimeout(() => {
+        handleNextStep()
+      }, 2000)
     }
     return () => clearTimeout(timer)
-  }, [isPlaying, currentStep, handleNextStep])
+  }, [isPlaying, handleNextStep, isLoading])
 
   // Effect to auto-scroll the messages area
   useEffect(() => {
@@ -248,17 +268,21 @@ export default function BreakoutRoomSimulator() {
           {/* Control Buttons */}
           <CardFooter className='flex justify-between items-center'>
             <Button
-              onClick={handleNextStep}
-              disabled={isPlaying || currentStep >= simulationSteps.length}
+              onClick={() => handleNextStep()}
+              disabled={isPlaying || isLoading}
             >
-              <SkipForward className='mr-2 h-4 w-4' /> Next Step
+              {isLoading ? (
+                'Processing...'
+              ) : (
+                <>
+                  <SkipForward className='mr-2 h-4 w-4' /> Next Step
+                </>
+              )}
             </Button>
-            <div className='text-sm font-medium'>
-              Turn: {currentStep} / {simulationSteps.length}
-            </div>
+            <div className='text-sm font-medium'>Turn: {currentStep}</div>
             <Button
               onClick={handlePlaySimulation}
-              disabled={isPlaying || currentStep >= simulationSteps.length}
+              disabled={isPlaying || isLoading}
             >
               <Play className='mr-2 h-4 w-4' /> Play Simulation
             </Button>

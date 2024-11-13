@@ -1,3 +1,4 @@
+export const TURN_PROMPT = `
 [Input]
 !<INPUT 0>!: Information about the agent persona
 !<INPUT 1>!: Context of the conversation (participants, camera status)
@@ -11,7 +12,7 @@ Output format -- output your response in json with the following fields:
   "message": "message content if action is speak, otherwise null"
 }
 
-<commentblockmarker>###</commentblockmarker>
+###
 
 You are an AI agent participating in a video conversation. Based on your personality, the context, and the dialogue history, you need to decide what action to take next.
 
@@ -45,3 +46,4 @@ Output your response in json with the following fields:
   "action": "One of: toggleCamera, speak, or doNothing",
   "message": "If action is speak, include your message here. Otherwise null"
 }
+`
