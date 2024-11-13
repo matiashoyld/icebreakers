@@ -70,6 +70,11 @@ export default function BreakoutRoomSimulator() {
     setIsLoading(true)
 
     try {
+      // Check for API key before proceeding
+      if (!process.env.NEXT_PUBLIC_OPENAI_API_KEY) {
+        throw new Error('OpenAI API key is not configured')
+      }
+
       // Start the simulation if it hasn't started
       if (!hasStarted) {
         setHasStarted(true)
@@ -153,6 +158,12 @@ export default function BreakoutRoomSimulator() {
       setCurrentStep((prev) => prev + 1)
     } catch (error) {
       console.error('Error in simulation step:', error)
+      // Add user-friendly error handling
+      alert(
+        'Error: ' +
+          (error instanceof Error ? error.message : 'Something went wrong')
+      )
+      setIsPlaying(false) // Stop auto-play if there's an error
     } finally {
       setIsLoading(false)
     }

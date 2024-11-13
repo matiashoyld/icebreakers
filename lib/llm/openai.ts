@@ -1,10 +1,5 @@
 import OpenAI from 'openai'
 
-const openai = new OpenAI({
-  apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
-  dangerouslyAllowBrowser: true,
-})
-
 /**
  * Prints formatted debug information about a prompt execution
  */
@@ -64,6 +59,8 @@ export async function gptRequest(
   maxTokens: number = 1500
 ): Promise<string> {
   try {
+    const openai = getOpenAIClient()
+
     const response = await openai.chat.completions.create({
       model,
       messages: [{ role: 'user', content: prompt }],
@@ -90,6 +87,7 @@ export async function getTextEmbedding(
   }
 
   try {
+    const openai = getOpenAIClient()
     const cleanText = text.replace(/\n/g, ' ').trim()
     const response = await openai.embeddings.create({
       input: [cleanText],
@@ -101,4 +99,20 @@ export async function getTextEmbedding(
     console.error('Error in getTextEmbedding:', error)
     throw error
   }
+}
+
+/**
+ * Gets the OpenAI client
+ */
+function getOpenAIClient() {
+  const apiKey = process.env.NEXT_PUBLIC_OPENAI_API_KEY
+
+  if (!apiKey) {
+    throw new Error('OpenAI API key is not configured')
+  }
+
+  return new OpenAI({
+    apiKey,
+    dangerouslyAllowBrowser: true,
+  })
 }
