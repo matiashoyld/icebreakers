@@ -3,7 +3,7 @@
  */
 export function extractFirstJsonDict(
   inputStr: string
-): Record<string, any> | null {
+): Record<string, unknown> | null {
   try {
     // Replace curly quotes with standard double quotes
     inputStr = inputStr.replace(/[""]/g, '"').replace(/['']/g, "'")

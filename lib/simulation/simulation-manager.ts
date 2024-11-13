@@ -50,7 +50,7 @@ export async function getNextSimulationStep(
   return {
     participantId: currentParticipantId,
     action: parsed.action as 'speak' | 'toggleCamera' | 'doNothing',
-    message: parsed.action === 'speak' ? parsed.message : undefined,
-    thinking: parsed.thinking,
+    message: parsed.action === 'speak' ? (parsed.message as string) : undefined,
+    thinking: parsed.thinking as string,
   }
 }
