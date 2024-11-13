@@ -1,36 +1,89 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Breaking the Ice: Virtual Room Dynamics Simulator
 
-## Getting Started
+A Next.js application that simulates and visualizes AI agent interactions in virtual breakout rooms, designed to study engagement patterns in online learning environments.
 
-First, run the development server:
+## Overview
+
+This simulator investigates the effectiveness of online learning environments through LLM-based simulations, focusing on:
+
+- **Leadership Dynamics**: Testing designated group leader effects
+- **Social Accountability**: Implementing peer recognition systems
+- **Gamification**: Exploring point-based incentives
+
+Common challenges we're addressing:
+
+- Low participation rates
+- Uneven contribution among members
+- Lack of clear direction
+- Difficulty in measuring engagement
+
+## Technical Stack
+
+### Agent System
+
+- Memory-enabled AI agents
+- Decision-making based on "excitement scores"
+- Context-aware interaction system
+- Real-time state management
+
+### Core Features
+
+- Turn-based interactions
+- Multiple simulation scenarios
+- Real-time analytics
+- Interactive visualizations
+
+## Setup
+
+### Requirements
+
+- Node.js 18.0 or later
+- npm
+
+### Installation
 
 ```bash
+# Clone repository
+git clone https://github.com/yourusername/breaking-the-ice.git
+cd breaking-the-ice
+
+# Install dependencies
+npm install
+
+# Start development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) to view the application.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Project Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+breaking-the-ice/
+├── app/
+│   ├── data/       # Simulation configurations
+│   ├── types/      # TypeScript definitions
+│   ├── layout.tsx  # App layout
+│   └── page.tsx    # Main page
+├── components/
+│   └── EngagementChart.tsx
+└── public/
+```
 
-## Learn More
+## Features
 
-To learn more about Next.js, take a look at the following resources:
+### Simulation Scenarios
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **Baseline**: Natural engagement patterns
+- **Leadership**: Group leader designation
+- **Social Accountability**: Peer rating system
+- **Gamification**: Point-based incentives
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Analytics
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Engagement metrics
+- Camera activation tracking
+- Speaking time distribution
+- Contribution quality
+- Task completion rates
+- Satisfaction scoring
