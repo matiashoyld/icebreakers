@@ -39,3 +39,38 @@ export type EngagementData = {
   engagement: number
   agentId: number
 }
+
+/**
+ * Represents a message sent to the LLM.
+ */
+export type ChatMessage = {
+  role: 'user' | 'assistant' | 'system'
+  content:
+    | string
+    | {
+        type: 'text' | 'image_url'
+        text?: string
+        image_url?: { url: string }
+      }[]
+}
+
+/**
+ * Represents a file attachment to be sent to the LLM.
+ */
+export type FileAttachment = {
+  type: 'image' | 'pdf'
+  base64Data: string
+  path?: string
+}
+
+/**
+ * Represents a response from the LLM.
+ */
+export type LLMResponse = {
+  content: string
+  usage?: {
+    promptTokens: number
+    completionTokens: number
+    totalTokens: number
+  }
+}
