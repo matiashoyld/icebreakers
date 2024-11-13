@@ -45,7 +45,7 @@ Common challenges we're addressing:
 ```bash
 # Clone repository
 git clone https://github.com/matiashoyld/icebreakers.git
-cd breaking-the-ice
+cd icebreakers
 
 # Install dependencies
 npm install
@@ -59,7 +59,7 @@ Open [http://localhost:3000](http://localhost:3000) to view the application.
 ## Project Structure
 
 ```
-breaking-the-ice/
+icebreakers/
 ├── app/
 │   ├── data/       # Simulation configurations
 │   ├── types/      # TypeScript definitions
