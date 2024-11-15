@@ -4,8 +4,12 @@ export const ENGAGEMENT_PROMPT = `
 !<INPUT 1>!: Agent descriptions 
 
 [Output]
-Output format -- output your response in the format:
-"Agent X: <engagement score>"
+Output format -- output your response in JSON format with the following fields:
+{
+  "<agent_name>": <engagement_score>,
+  "<agent_name>": <engagement_score>,
+  ...
+}
 
 Where <engagement score> is an integer between 0 and 100, representing the agent's level of interest in contributing to the conversation.
 
@@ -25,6 +29,6 @@ Agent descriptions:
 
 Assign an engagement score to each agent based on their interest in contributing to the conversation. Consider factors such as relevance to the conversation topic, level of participation, and tone.
 
-Output your response in the format "Agent X: <engagement score>" for each agent.
+Output your response in the JSON format specified above.
 `;
 
