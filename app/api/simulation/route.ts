@@ -4,6 +4,29 @@ import { SimulationContext } from '@/lib/simulation/simulation-manager'
 import { extractFirstJsonDict } from '@/lib/utils/json-parsers'
 import { NextResponse } from 'next/server'
 import OpenAI from 'openai'
+import { readFileSync } from 'fs'
+import path from 'path'
+
+// Add this near the top of the file
+const AGENT_PERSONA_FILES = {
+  1: 'absinha.txt',  // Diana
+  2: 'bradley.txt',  // Bob
+  3: 'drew.txt',     // Charlie
+  4: 'wpo.txt'       // Alice
+}
+
+function getAgentPersona(participantId: number): string {
+  const filename = AGENT_PERSONA_FILES[participantId]
+  if (!filename) return ''
+  
+  try {
+    const filePath = path.join(process.cwd(), 'agent_personas', filename)
+    return readFileSync(filePath, 'utf-8')
+  } catch (error) {
+    console.error(`Failed to read persona file for participant ${participantId}:`, error)
+    return ''
+  }
+}
 
 // Move client initialization inside the handler
 async function getOpenAIClient() {
@@ -36,8 +59,8 @@ export async function POST(request: Request) {
     // Create dialogue history string
     const dialogueString = context.dialogueHistory.map((msg) => msg).join('\n')
 
-    // For now, use empty string for agent persona (we'll add this later)
-    const agentPersona = ''
+    // Replace the empty agentPersona with the content from the corresponding file
+    const agentPersona = getAgentPersona(currentParticipantId)
 
     // Generate prompt using the template
     const filledPrompt = await generatePrompt(
