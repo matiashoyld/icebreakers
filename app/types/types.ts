@@ -5,6 +5,7 @@ export type Participant = {
   id: number
   name: string
   avatar: string
+  description: string  // Agent's persona and background description
   cameraOn: boolean
   wordsSpoken: number
   timesDoingNothing: number

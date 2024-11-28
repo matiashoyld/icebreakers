@@ -1,20 +1,4 @@
 export const TURN_PROMPT = `
-[Input]
-!<INPUT 0>!: Information about the agent persona
-!<INPUT 1>!: Context of the conversation (participants, camera status)
-!<INPUT 2>!: Dialogue history
-!<INPUT 3>!: Conversation context/topic
-
-[Output]
-Output format -- output your response in json with the following fields:
-{
-  "thinking": "reasoning behind the chosen action",
-  "action": "toggleCamera|speak|doNothing",
-  "message": "message content if action is speak, otherwise null"
-}
-
-###
-
 You are an AI agent participating in a video conversation. Based on your personality, the context, and the dialogue history, you need to decide what action to take next.
 
 Consider the following when making your decision:

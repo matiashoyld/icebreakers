@@ -75,10 +75,7 @@ export default function BreakoutRoomSimulator() {
         setHasStarted(true)
       }
 
-      // Determine which participant's turn it is
-      const currentParticipantId = (currentStep % participants.length) + 1
-
-      // Get next step from LLM
+      // Get next step using engagement-based selection
       const step = await getNextSimulationStep(
         {
           participants,
@@ -86,7 +83,7 @@ export default function BreakoutRoomSimulator() {
           dialogueHistory,
           conversationContext,
         },
-        currentParticipantId
+        currentAgent?.id || 1
       )
 
       // Update participants state
@@ -169,6 +166,7 @@ export default function BreakoutRoomSimulator() {
     isLoading,
     conversationContext,
     hasStarted,
+    currentAgent,
   ])
 
   // Handler to play the simulation automatically
@@ -239,6 +237,9 @@ export default function BreakoutRoomSimulator() {
                   </div>
                   <div className='absolute top-2 right-2 bg-background/80 px-2 py-1 rounded text-sm'>
                     Engagement: {getLatestEngagement(participant.id)}%
+                  </div>
+                  <div className='absolute bottom-2 left-2 right-2 bg-background/80 px-2 py-1 rounded text-xs overflow-hidden text-ellipsis whitespace-nowrap' title={participant.description}>
+                    {participant.description}
                   </div>
                 </div>
               ))}

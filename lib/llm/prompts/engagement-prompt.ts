@@ -1,34 +1,39 @@
 export const ENGAGEMENT_PROMPT = `
-[Input]
-!<INPUT 0>!: Dialogue history
-!<INPUT 1>!: Agent descriptions 
+You are managing turn-taking dynamics in a multi-agent conversation. Your role is to analyze how engaged a specific agent is in the conversation and determine their likelihood of speaking next. Your goal is to make the conversation natural and believable by assigning an appropriate engagement score.
 
-[Output]
-Output format -- output your response in JSON format with the following fields:
-{
-  "<agent_name>": <engagement_score>,
-  "<agent_name>": <engagement_score>,
-  ...
-}
+Where <engagement_score> is an integer between 0 and 100, representing the agent's level of interest in contributing to the conversation. Consider the agent's personality and background when evaluating their engagement - some may show engagement through active listening and thoughtful responses, while others may be more talkative.
 
-Where <engagement score> is an integer between 0 and 100, representing the agent's level of interest in contributing to the conversation.
+Current agent information:
+<agent_info>
+!<INPUT 0>!
+</agent_info>
 
-###
-
-You are an analyst tasked with determining which agent is most engaged in a conversation. Based on the dialogue history and agent descriptions, assign an engagement score to each agent.
+Other participants' current state:
+<other_participants>
+!<INPUT 1>!
+</other_participants>
 
 Dialogue history:
 <dialogue_history>
-!<INPUT 0>!
+!<INPUT 2>!
 </dialogue_history>
 
-Agent descriptions:
-<agent_descriptions>
-!<INPUT 1>!
-</agent_descriptions>
+Determine this agent's engagement score based on:
+1. Their personality traits and background (from their description)
+2. Their current state metrics:
+   - Words spoken so far
+   - Camera status
+   - Overall participation rate
+3. The content and relevance of recent messages to their expertise/interests
+4. The natural flow of conversation (e.g., if they were just asked a question)
+5. Their participation level compared to others
+6. If they've spoken last, their engagement score should always be less than 50
 
-Assign an engagement score to each agent based on their interest in contributing to the conversation. Consider factors such as relevance to the conversation topic, level of participation, and tone.
+Output a single integer between 0 and 100 representing this agent's engagement score. Higher scores indicate greater likelihood of meaningful contribution in the next turn.
 
-Output your response in the JSON format specified above.
+Output your response in JSON format as specified below:
+{
+  "score": <engagement_score>,
+  "reasoning": "Brief explanation of why this score was assigned"
+}
 `;
-

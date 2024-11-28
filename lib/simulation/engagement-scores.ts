@@ -18,31 +18,39 @@ async function getAgentEngagementScore(
     openai: any
 ): Promise<EngagementResponse> {
     // Format agent information
+    const lastMessage = dialogueHistory[dialogueHistory.length - 1] || '';
+    const wasLastSpeaker = lastMessage.startsWith(`${agent.name}:`);
+    
     const agentInfo = JSON.stringify({
         name: agent.name,
         description: agent.description,
         currentState: {
             wordsSpoken: agent.wordsSpoken,
             cameraOn: agent.cameraOn,
-            participationRate: Math.round(agent.participationRate * 100)
+            participationRate: Math.round(agent.participationRate * 100),
+            wasLastSpeaker: wasLastSpeaker
         }
     });
 
-    // Format other participants' information
+    // Format other participants' information with last message indicators
     const otherParticipantsInfo = otherParticipants.map(p => 
         JSON.stringify({
             name: p.name,
             currentState: {
                 wordsSpoken: p.wordsSpoken,
                 cameraOn: p.cameraOn,
-                participationRate: Math.round(p.participationRate * 100)
+                participationRate: Math.round(p.participationRate * 100),
+                wasLastSpeaker: lastMessage.startsWith(`${p.name}:`)
             }
         })
     ).join('\n');
 
+    // Add recent dialogue context
+    const recentDialogue = dialogueHistory.slice(-5).join('\n'); // Only use last 5 messages for recency
+
     // Generate the prompt for this agent
     const prompt = await generatePrompt(
-        [agentInfo, otherParticipantsInfo, dialogueHistory.join('\n')],
+        [agentInfo, otherParticipantsInfo, recentDialogue],
         ENGAGEMENT_PROMPT
     );
 

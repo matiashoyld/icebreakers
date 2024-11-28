@@ -1,91 +1,72 @@
-import { generatePrompt } from '@/lib/llm/openai'
-import { TURN_PROMPT } from '@/lib/llm/prompts/turn-prompt'
-import { SimulationContext } from '@/lib/simulation/simulation-manager'
-import { extractFirstJsonDict } from '@/lib/utils/json-parsers'
-import { NextResponse } from 'next/server'
-import OpenAI from 'openai'
-
-// Move client initialization inside the handler
-async function getOpenAIClient() {
-  const apiKey = process.env.OPENAI_API_KEY
-
-  if (!apiKey) {
-    throw new Error('OpenAI API key is not configured in environment variables')
-  }
-
-  return new OpenAI({
-    apiKey: apiKey,
-  })
-}
+import { NextResponse } from 'next/server';
+import { getOpenAIClient, generatePrompt } from '@/lib/llm/openai';
+import { TURN_PROMPT } from '@/lib/llm/prompts/turn-prompt';
+import { SimulationContext } from '@/lib/simulation/simulation-manager';
+import { SimulationStep } from '@/app/types/types';
 
 export async function POST(request: Request) {
-  try {
-    const openai = await getOpenAIClient()
+    try {
+        const { context, currentParticipantId } = await request.json();
+        const openai = getOpenAIClient();
 
-    const body = await request.json()
-    const { context, currentParticipantId } = body as {
-      context: SimulationContext
-      currentParticipantId: number
+        // Prepare the context for the prompt
+        const currentParticipant = context.participants.find(
+            (p: any) => p.id === currentParticipantId
+        );
+        
+        if (!currentParticipant) {
+            throw new Error('Current participant not found');
+        }
+
+        // Create context string about participants and their camera status
+        const participantsContext = context.participants
+            .map((p) => `${p.name} (${p.cameraOn ? 'Camera ON' : 'Camera OFF'}): ${p.description}`)
+            .join('\n')
+
+        // Create dialogue history string
+        const dialogueString = context.dialogueHistory.map((msg) => msg).join('\n')
+
+
+        // Generate the prompt with enhanced agent information
+        const prompt = await generatePrompt([
+            JSON.stringify({
+                name: currentParticipant.name,
+                currentRole: 'You are ' + currentParticipant.name + '. ' + currentParticipant.description,
+                cameraOn: currentParticipant.cameraOn,
+                wordsSpoken: currentParticipant.wordsSpoken,
+                participationRate: currentParticipant.participationRate
+            }),
+            participantsContext,
+            dialogueString,
+            context.conversationContext,
+        ], TURN_PROMPT);
+
+        // Generate the agent's next action
+        const completion = await openai.chat.completions.create({
+            model: 'gpt-4o-mini', // Updated to use a valid model name
+            messages: [{ role: 'user', content: prompt }],
+            max_tokens: 1500,
+            temperature: 0.7,
+        });
+
+        // Parse the response
+        const responseContent = completion.choices[0].message.content;
+        const parsedResponse = JSON.parse(responseContent || '{}');
+
+        // Construct the simulation step
+        const step: SimulationStep = {
+            participantId: currentParticipantId,
+            action: parsedResponse.action || 'doNothing',
+            thinking: parsedResponse.thinking || '',
+            message: parsedResponse.message
+        };
+
+        return NextResponse.json(step);
+    } catch (error) {
+        console.error('Simulation API error:', error);
+        return NextResponse.json(
+            { error: 'Failed to process simulation step' },
+            { status: 500 }
+        );
     }
-
-    // Create context string about participants and their camera status
-    const participantsContext = context.participants
-      .map((p) => `${p.name}: Camera ${p.cameraOn ? 'ON' : 'OFF'}`)
-      .join('\n')
-
-    // Create dialogue history string
-    const dialogueString = context.dialogueHistory.map((msg) => msg).join('\n')
-
-    // For now, use empty string for agent persona (we'll add this later)
-    const agentPersona = ''
-
-    // Generate prompt using the template
-    const filledPrompt = await generatePrompt(
-      [
-        agentPersona,
-        participantsContext,
-        dialogueString,
-        context.conversationContext,
-      ],
-      TURN_PROMPT
-    )
-
-    // Get response from OpenAI
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini', // Updated to use a valid model name
-      messages: [{ role: 'user', content: filledPrompt }],
-      max_tokens: 1500,
-      temperature: 0.7,
-    })
-
-    const output = response.choices[0].message.content || ''
-
-    // Parse the response
-    const parsed = extractFirstJsonDict(output)
-
-    if (!parsed) {
-      throw new Error('Failed to parse LLM response')
-    }
-
-    // Convert to SimulationStep format
-    const step = {
-      participantId: currentParticipantId,
-      action: parsed.action as 'speak' | 'toggleCamera' | 'doNothing',
-      message:
-        parsed.action === 'speak' ? (parsed.message as string) : undefined,
-      thinking: parsed.thinking as string,
-    }
-
-    return NextResponse.json(step)
-  } catch (error) {
-    console.error('Error in simulation API:', error)
-    return NextResponse.json(
-      {
-        error:
-          'Failed to process simulation step: ' +
-          (error instanceof Error ? error.message : 'Unknown error'),
-      },
-      { status: 500 }
-    )
-  }
 }
