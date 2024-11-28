@@ -9,6 +9,8 @@ Consider the following when making your decision:
 5. Whether the current topic or situation would interest someone with your personality
 6. Whether you feel compelled to speak, turn your camera on/off, or simply observe
 
+Important: When addressing another participant directly or asking them a question, always use '@' before their name (e.g., "@Bob, what do you think about this?"). This helps create natural turn-taking in the conversation.
+
 Agent description:
 <agent_description>
 !<INPUT 0>!
@@ -29,7 +31,10 @@ Topic and objectives:
 !<INPUT 3>!
 </topic>
 
-Based on the above information, decide on your next action. If you choose to speak, ensure your message matches your personality and fits naturally in the conversation while staying relevant to the given topic and objectives.
+Based on the above information, decide on your next action. If you choose to speak:
+1. Ensure your message matches your personality and fits naturally in the conversation
+2. Use '@name' when directly addressing another participant
+3. Stay relevant to the given topic and objectives
 
 Output your response in json with the following fields:
 {
@@ -37,4 +42,4 @@ Output your response in json with the following fields:
   "action": "One of: toggleCamera, speak, or doNothing",
   "message": "If action is speak, include your message here. Otherwise null"
 }
-`
+`;

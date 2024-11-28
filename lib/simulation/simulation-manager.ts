@@ -18,6 +18,50 @@ export async function getNextSimulationStep(
     console.log('Current turn:', context.currentTurn);
     console.log('Current dialogue history:', context.dialogueHistory);
 
+    // Check for mentions in the last message
+    const lastMessage = context.dialogueHistory[context.dialogueHistory.length - 1] || '';
+    const mentionMatch = lastMessage.match(/@(\w+)/);
+    if (mentionMatch) {
+      const mentionedName = mentionMatch[1];
+      const mentionedParticipant = context.participants.find(
+        p => p.name.toLowerCase() === mentionedName.toLowerCase()
+      );
+      
+      if (mentionedParticipant && mentionedParticipant.id !== currentParticipantId) {
+        console.log(`${mentionedParticipant.name} was mentioned, they will speak next`);
+        const response = await fetch('/api/simulation', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            context,
+            currentParticipantId: mentionedParticipant.id,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error('Simulation API error:', errorData);
+          throw new Error(errorData.error || 'Failed to get next simulation step');
+        }
+
+        const data = await response.json();
+        console.log('API response:', data);
+        
+        // Log the final decision
+        console.log('=== Simulation step complete ===');
+        console.log('Final selection:', {
+          participantId: data.participantId,
+          name: context.participants.find(p => p.id === data.participantId)?.name,
+          action: data.action,
+          hasMessage: !!data.message
+        });
+        
+        return data;
+      }
+    }
+    
     // Get engagement scores for all participants
     console.log('Getting engagement scores...');
     const engagementScores = await getEngagementScores(context.participants, context);

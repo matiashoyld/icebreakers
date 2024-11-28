@@ -16,12 +16,14 @@ import { Progress } from '@/components/ui/progress'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { Textarea } from '@/components/ui/textarea'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 // Icons
 import {
   Activity,
   BarChart,
   Brain,
   CameraOff,
+  Info,
   MessageSquare,
   Play,
   SkipForward,
@@ -49,6 +51,7 @@ export default function BreakoutRoomSimulator() {
   const [currentAgent, setCurrentAgent] = useState<Participant | null>(null)
   const [currentDecision, setCurrentDecision] = useState<string>('')
   const [isPlaying, setIsPlaying] = useState(false)
+  const [targetSteps, setTargetSteps] = useState<number>(0)
   const [engagementData, setEngagementData] = useState<EngagementData[]>([])
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const [dialogueHistory, setDialogueHistory] = useState<string[]>([])
@@ -73,6 +76,11 @@ export default function BreakoutRoomSimulator() {
       // Start the simulation if it hasn't started
       if (!hasStarted) {
         setHasStarted(true)
+      }
+
+      if (targetSteps > 0 && currentStep >= targetSteps) {
+        setIsPlaying(false)
+        return
       }
 
       // Get next step using engagement-based selection
@@ -167,6 +175,7 @@ export default function BreakoutRoomSimulator() {
     conversationContext,
     hasStarted,
     currentAgent,
+    targetSteps,
   ])
 
   // Handler to play the simulation automatically
@@ -238,9 +247,30 @@ export default function BreakoutRoomSimulator() {
                   <div className='absolute top-2 right-2 bg-background/80 px-2 py-1 rounded text-sm'>
                     Engagement: {getLatestEngagement(participant.id)}%
                   </div>
-                  <div className='absolute bottom-2 left-2 right-2 bg-background/80 px-2 py-1 rounded text-xs overflow-hidden text-ellipsis whitespace-nowrap' title={participant.description}>
-                    {participant.description}
-                  </div>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <button className='absolute bottom-2 right-2 bg-background/80 p-2 rounded-full hover:bg-background/90 transition-colors'>
+                        <Info className='w-4 h-4' />
+                      </button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle className='flex items-center gap-2'>
+                          <Avatar className='h-8 w-8'>
+                            <AvatarImage
+                              src={participant.avatar}
+                              alt={participant.name}
+                            />
+                            <AvatarFallback>{participant.name[0]}</AvatarFallback>
+                          </Avatar>
+                          {participant.name}
+                        </DialogTitle>
+                        <DialogDescription className='mt-4 text-base'>
+                          {participant.description}
+                        </DialogDescription>
+                      </DialogHeader>
+                    </DialogContent>
+                  </Dialog>
                 </div>
               ))}
             </div>
@@ -268,6 +298,18 @@ export default function BreakoutRoomSimulator() {
                           setConversationContext(e.target.value)
                         }
                       />
+                      <div className='mt-4'>
+                        <label className='text-sm font-medium'>
+                          Number of Steps (0 for unlimited)
+                        </label>
+                        <input
+                          type='number'
+                          min='0'
+                          className='w-full mt-1 px-3 py-2 bg-background border rounded-md'
+                          value={targetSteps}
+                          onChange={(e) => setTargetSteps(Math.max(0, parseInt(e.target.value) || 0))}
+                        />
+                      </div>
                     </div>
                   </div>
                 ) : (
