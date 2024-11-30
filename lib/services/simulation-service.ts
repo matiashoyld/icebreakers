@@ -14,20 +14,20 @@ export type SimulationTurn = {
 }
 
 export type SaveSimulationParams = {
-  context: string
+  simulationType: 'baseline' | 'leadership' | 'social' | 'gamification'
   participants: Participant[]
   turns: SimulationTurn[]
 }
 
 export async function saveSimulation({
-  context,
+  simulationType,
   participants,
   turns,
 }: SaveSimulationParams) {
   return await prisma.$transaction(async (tx) => {
     const simulation = await tx.simulation.create({
       data: {
-        context,
+        simulationType,
         totalTurns: turns.length,
       },
     })
@@ -125,7 +125,11 @@ export async function getSimulations() {
     return {
       id: simulation.id,
       createdAt: simulation.createdAt.toISOString(),
-      context: simulation.context,
+      simulationType: simulation.simulationType as
+        | 'baseline'
+        | 'leadership'
+        | 'social'
+        | 'gamification',
       totalTurns: simulation._count.turns,
       taskScore: simulation.taskScore,
       avgParticipation,

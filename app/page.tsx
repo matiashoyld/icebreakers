@@ -310,6 +310,10 @@ export default function BreakoutRoomSimulator() {
   const handleEndSimulation = async () => {
     setLoadingButton('save')
     try {
+      if (!selectedScenario) {
+        throw new Error('No scenario selected')
+      }
+
       const response = await fetch('/api/simulations', {
         method: 'POST',
         headers: {
@@ -318,6 +322,7 @@ export default function BreakoutRoomSimulator() {
         body: JSON.stringify({
           participants,
           turns: simulationTurns,
+          simulationType: selectedScenario.id,
         }),
       })
 
