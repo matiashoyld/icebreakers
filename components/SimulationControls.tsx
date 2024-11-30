@@ -29,7 +29,7 @@ export function SimulationControls({
   selectedScenario,
 }: SimulationControlsProps) {
   return (
-    <div className='flex items-center justify-center gap-6 border-t py-4'>
+    <div className='flex items-center justify-between gap-6 w-full'>
       <div className='flex items-center gap-3'>
         <Button
           onClick={onNextStep}
@@ -75,33 +75,30 @@ export function SimulationControls({
         </Button>
       </div>
 
-      <div className='flex items-center gap-3'>
-        <div className='px-4 py-1.5 bg-muted rounded-full'>
-          <span className='text-sm font-medium'>
-            Turn{' '}
-            <span className='text-primary font-semibold'>{currentStep}</span>
-          </span>
-        </div>
-
-        <Button
-          onClick={onEndSimulation}
-          disabled={isLoading || !hasStarted || simulationTurns.length === 0}
-          variant='ghost'
-          className='w-28 h-9'
-        >
-          {loadingButton === 'save' ? (
-            <>
-              <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-              Wait...
-            </>
-          ) : (
-            <>
-              <Save className='mr-2 h-4 w-4' />
-              Save
-            </>
-          )}
-        </Button>
+      <div className='px-4 py-1.5 bg-muted rounded-full'>
+        <span className='text-sm font-medium'>
+          Turn <span className='text-primary font-semibold'>{currentStep}</span>
+        </span>
       </div>
+
+      <Button
+        onClick={onEndSimulation}
+        disabled={isLoading || !hasStarted || simulationTurns.length === 0}
+        variant='ghost'
+        className='w-28 h-9'
+      >
+        {loadingButton === 'save' ? (
+          <>
+            <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+            Wait...
+          </>
+        ) : (
+          <>
+            <Save className='mr-2 h-4 w-4' />
+            Save
+          </>
+        )}
+      </Button>
     </div>
   )
 }
