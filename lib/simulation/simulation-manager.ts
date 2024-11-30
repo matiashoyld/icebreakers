@@ -1,5 +1,12 @@
 import { salvageItems } from '@/app/data/data'
 import { Participant, SimulationStep } from '@/app/types/types'
+import { generatePrompt } from '@/lib/llm/openai'
+import {
+  baselinePrompt,
+  gamificationPrompt,
+  leadershipPrompt,
+  socialPrompt,
+} from '@/lib/llm/prompts/prompts'
 
 export type SimulationContext = {
   participants: Participant[]
@@ -12,8 +19,10 @@ interface SimulationInput {
   participants: Participant[]
   currentTurn: number
   dialogueHistory: string[]
-  conversationContext: string
   currentRanking: typeof salvageItems
+  scenario: {
+    id: 'baseline' | 'leadership' | 'social' | 'gamification'
+  }
 }
 
 export async function getNextSimulationStep(
@@ -24,6 +33,26 @@ export async function getNextSimulationStep(
     (p) => p.id === currentParticipantId
   )
   if (!participant) throw new Error('Participant not found')
+
+  let prompt: string
+  switch (input.scenario.id) {
+    case 'leadership': {
+      const leaderId = getOrSetLeader(input.participants)
+      const isLeader = currentParticipantId === leaderId
+      const leader = input.participants.find((p) => p.id === leaderId)
+      if (!leader) throw new Error('Leader not found')
+      prompt = leadershipPrompt(leader.name, isLeader)
+      break
+    }
+    case 'social':
+      prompt = socialPrompt()
+      break
+    case 'gamification':
+      prompt = gamificationPrompt()
+      break
+    default:
+      prompt = baselinePrompt('')
+  }
 
   const currentRankingText =
     input.currentRanking.length === 0
@@ -38,9 +67,10 @@ export async function getNextSimulationStep(
     JSON.stringify(participant),
     JSON.stringify(input.participants),
     input.dialogueHistory.join('\n'),
-    input.conversationContext,
     currentRankingText,
   ]
+
+  const filledPrompt = await generatePrompt(promptInputs, prompt)
 
   const response = await fetch('/api/simulation', {
     method: 'POST',
@@ -52,11 +82,11 @@ export async function getNextSimulationStep(
         participants: input.participants,
         currentTurn: input.currentTurn,
         dialogueHistory: input.dialogueHistory,
-        conversationContext: input.conversationContext,
         currentRanking: input.currentRanking,
       },
       currentParticipantId,
       promptInputs,
+      prompt,
     }),
   })
 
@@ -65,7 +95,6 @@ export async function getNextSimulationStep(
   }
 
   const responseData = await response.json()
-  console.log('API Response:', JSON.stringify(responseData, null, 2))
 
   const step: SimulationStep = {
     participantId: currentParticipantId,
@@ -77,4 +106,18 @@ export async function getNextSimulationStep(
   }
 
   return step
+}
+
+const leaderMap = new Map<string, number>()
+
+function getOrSetLeader(participants: Participant[]): number {
+  const key = participants.map((p) => p.id).join(',')
+
+  if (!leaderMap.has(key)) {
+    const randomIndex = Math.floor(Math.random() * participants.length)
+    const leaderId = participants[randomIndex].id
+    leaderMap.set(key, leaderId)
+  }
+
+  return leaderMap.get(key)!
 }

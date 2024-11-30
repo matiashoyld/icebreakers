@@ -1,5 +1,4 @@
 import { generatePrompt } from '@/lib/llm/openai'
-import { TURN_PROMPT } from '@/lib/llm/prompts/turn-prompt'
 import { extractFirstJsonDict } from '@/lib/utils/json-parsers'
 import { NextResponse } from 'next/server'
 import OpenAI from 'openai'
@@ -22,13 +21,14 @@ export async function POST(request: Request) {
     const openai = await getOpenAIClient()
 
     const body = await request.json()
-    const { currentParticipantId, promptInputs } = body as {
+    const { currentParticipantId, promptInputs, prompt } = body as {
       currentParticipantId: number
       promptInputs: string[]
+      prompt: string
     }
 
-    // Generate prompt using the template and all inputs from the client
-    const filledPrompt = await generatePrompt(promptInputs, TURN_PROMPT)
+    // Use the provided prompt instead of TURN_PROMPT
+    const filledPrompt = await generatePrompt(promptInputs, prompt)
 
     console.log('Filled prompt:', filledPrompt)
 
@@ -41,10 +41,8 @@ export async function POST(request: Request) {
     })
 
     const output = response.choices[0].message.content || ''
-    console.log('LLM Response:', output)
 
     const parsed = extractFirstJsonDict(output)
-    console.log('Parsed Response:', parsed)
 
     if (!parsed) {
       throw new Error('Failed to parse LLM response')
@@ -60,7 +58,6 @@ export async function POST(request: Request) {
       prompt: filledPrompt,
       rankingChanges: parsed.rankingChanges,
     }
-    console.log('Step being returned:', step)
 
     return NextResponse.json(step)
   } catch (error) {
