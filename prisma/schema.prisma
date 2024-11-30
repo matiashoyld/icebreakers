@@ -11,7 +11,7 @@ datasource db {
 model Simulation {
   id              String    @id @default(cuid())
   createdAt       DateTime  @default(now())
-  context         String    // The initial conversation context
+  simulationType  String    // 'baseline' | 'leadership' | 'social' | 'gamification'
   totalTurns      Int
   taskScore       Float?    // Optional score for the task completion
   participants    SimulationParticipant[]

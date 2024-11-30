@@ -15,7 +15,6 @@ import { DataTable } from './components/data-table'
 
 export default async function SimulationsPage() {
   const simulations = await getSimulations()
-  console.log('Fetched simulations:', simulations)
 
   return (
     <div className='flex flex-col gap-4 p-4 md:p-6 w-full max-w-7xl mx-auto'>

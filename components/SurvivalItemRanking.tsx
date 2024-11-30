@@ -77,7 +77,7 @@ export function SurvivalItemRanking({
                               </motion.div>
                             ) : (
                               <span className='text-muted-foreground italic'>
-                                Not ranked yet
+                                -
                               </span>
                             )}
                           </TableCell>

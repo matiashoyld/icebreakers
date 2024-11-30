@@ -40,14 +40,6 @@ export function AgentAnalysis({
   proposedChanges,
   engagementData,
 }: AgentAnalysisProps) {
-  console.log('AgentAnalysis props:', {
-    currentAgent,
-    currentThinking,
-    currentDecision,
-    proposedChanges,
-    engagementData,
-  })
-
   if (!currentAgent) return null
 
   return (

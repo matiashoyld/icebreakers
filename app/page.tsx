@@ -11,13 +11,13 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Textarea } from '@/components/ui/textarea'
 // Icons
 
 // Custom Components
 import { AgentAnalysis } from '@/components/AgentAnalysis'
 import { MessageItem } from '@/components/Message'
 import { ParticipantVideo } from '@/components/ParticipantVideo'
+import { ScenarioSelector, type Scenario } from '@/components/ScenarioSelector'
 import { SimulationControls } from '@/components/SimulationControls'
 import { SurvivalItemRanking } from '@/components/SurvivalItemRanking'
 
@@ -50,7 +50,6 @@ export default function BreakoutRoomSimulator() {
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const [dialogueHistory, setDialogueHistory] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(false)
-  const [conversationContext, setConversationContext] = useState('')
   const [hasStarted, setHasStarted] = useState(false)
   const [simulationTurns, setSimulationTurns] = useState<
     {
@@ -77,6 +76,10 @@ export default function BreakoutRoomSimulator() {
     'next' | 'play' | 'save' | null
   >(null)
 
+  const [selectedScenario, setSelectedScenario] = useState<Scenario | null>(
+    null
+  )
+
   // Function to get the latest engagement score for a participant
   const getLatestEngagement = (participantId: number) => {
     const participantData = engagementData
@@ -92,13 +95,14 @@ export default function BreakoutRoomSimulator() {
     try {
       // Start the simulation if it hasn't started
       if (!hasStarted) {
+        if (!selectedScenario) {
+          throw new Error('Please select a scenario before starting')
+        }
         setHasStarted(true)
       }
 
       // Determine which participant's turn it is
       const currentParticipantId = (currentStep % participants.length) + 1
-
-      console.log('About to get next step...')
 
       // Get next step from LLM
       const step = await getNextSimulationStep(
@@ -106,24 +110,16 @@ export default function BreakoutRoomSimulator() {
           participants,
           currentTurn: currentStep,
           dialogueHistory,
-          conversationContext,
           currentRanking: itemRanking.filter(
             (item): item is (typeof salvageItems)[0] => item !== undefined
           ),
+          scenario: selectedScenario!,
         },
         currentParticipantId
       )
 
-      // Move debug logs here, right after getting the step
-      console.log('Full step object:', JSON.stringify(step, null, 2))
-      console.log('Step ranking changes type:', typeof step.rankingChanges)
-      console.log('Is array?', Array.isArray(step.rankingChanges))
-
       // Process any ranking changes requested by the agent
       if (step.rankingChanges && step.rankingChanges.length > 0) {
-        console.log('Raw ranking changes:', step.rankingChanges)
-        console.log('Current itemRanking:', itemRanking)
-
         const changes: Change[] = step.rankingChanges.map((change) => {
           const salvageItem = salvageItems.find((item) =>
             item.name.toLowerCase().includes(change.item.toLowerCase())
@@ -178,8 +174,6 @@ export default function BreakoutRoomSimulator() {
       } else {
         setProposedChanges([])
       }
-
-      console.log('itemRanking after setting:', itemRanking)
 
       // Update participants state
       setParticipants((prevParticipants) =>
@@ -278,7 +272,7 @@ export default function BreakoutRoomSimulator() {
     messages,
     dialogueHistory,
     isLoading,
-    conversationContext,
+    selectedScenario,
     hasStarted,
     itemRanking,
   ])
@@ -316,15 +310,19 @@ export default function BreakoutRoomSimulator() {
   const handleEndSimulation = async () => {
     setLoadingButton('save')
     try {
+      if (!selectedScenario) {
+        throw new Error('No scenario selected')
+      }
+
       const response = await fetch('/api/simulations', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          context: conversationContext,
           participants,
           turns: simulationTurns,
+          simulationType: selectedScenario.id,
         }),
       })
 
@@ -341,11 +339,6 @@ export default function BreakoutRoomSimulator() {
       setLoadingButton(null)
     }
   }
-
-  // Add this near your other useEffects
-  useEffect(() => {
-    console.log('itemRanking changed:', itemRanking)
-  }, [itemRanking])
 
   return (
     <div className='h-screen p-6'>
@@ -377,23 +370,12 @@ export default function BreakoutRoomSimulator() {
                 {!hasStarted ? (
                   <div className='h-full flex flex-col'>
                     <div className='h-full flex flex-col mx-auto w-full'>
-                      <div className='space-y-2'>
-                        <h3 className='font-semibold text-2xl'>
-                          Set the Context
-                        </h3>
-                        <p className='text-sm text-muted-foreground'>
-                          Describe the situation and what the participants
-                          should discuss. This will help guide their
-                          conversation.
-                        </p>
-                      </div>
-                      <Textarea
-                        className='flex-1 resize-none text-base mt-3'
-                        placeholder='Example: This is a team meeting to discuss the upcoming product launch. The team needs to decide on the launch date and marketing strategy.'
-                        value={conversationContext}
-                        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                          setConversationContext(e.target.value)
-                        }
+                      <h3 className='font-medium text-lg mb-4'>
+                        Select Scenario
+                      </h3>
+                      <ScenarioSelector
+                        selectedScenario={selectedScenario}
+                        onSelectScenario={setSelectedScenario}
                       />
                     </div>
                   </div>
@@ -436,8 +418,8 @@ export default function BreakoutRoomSimulator() {
               hasStarted={hasStarted}
               currentStep={currentStep}
               loadingButton={loadingButton}
-              conversationContext={conversationContext}
               simulationTurns={simulationTurns}
+              selectedScenario={selectedScenario}
             />
           </CardFooter>
         </Card>

@@ -1,3 +1,4 @@
+import { Scenario } from '@/components/ScenarioSelector'
 import { Button } from '@/components/ui/button'
 import { SimulationTurn } from '@/lib/services/simulation-service'
 import { Loader2, Play, Save, SkipForward } from 'lucide-react'
@@ -11,8 +12,8 @@ interface SimulationControlsProps {
   hasStarted: boolean
   currentStep: number
   loadingButton: 'next' | 'play' | 'save' | null
-  conversationContext: string
   simulationTurns: SimulationTurn[]
+  selectedScenario: Scenario | null
 }
 
 export function SimulationControls({
@@ -24,19 +25,15 @@ export function SimulationControls({
   hasStarted,
   currentStep,
   loadingButton,
-  conversationContext,
   simulationTurns,
+  selectedScenario,
 }: SimulationControlsProps) {
   return (
     <div className='flex items-center justify-center gap-6 border-t py-4'>
       <div className='flex items-center gap-3'>
         <Button
           onClick={onNextStep}
-          disabled={
-            isLoading ||
-            isPlaying ||
-            (!hasStarted && !conversationContext.trim())
-          }
+          disabled={isLoading || isPlaying || !selectedScenario}
           className='w-28 h-9'
           variant={'ghost'}
         >
