@@ -3,8 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 // UI Components
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
@@ -12,32 +10,31 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { Progress } from '@/components/ui/progress'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Separator } from '@/components/ui/separator'
 import { Textarea } from '@/components/ui/textarea'
 // Icons
-import {
-  Activity,
-  BarChart,
-  Brain,
-  CameraOff,
-  MessageSquare,
-  Play,
-  SkipForward,
-} from 'lucide-react'
 
 // Custom Components
-import { EngagementChart } from '@/components/EngagementChart'
+import { AgentAnalysis } from '@/components/AgentAnalysis'
+import { MessageItem } from '@/components/Message'
+import { ParticipantVideo } from '@/components/ParticipantVideo'
+import { SimulationControls } from '@/components/SimulationControls'
+import { SurvivalItemRanking } from '@/components/SurvivalItemRanking'
 
 // Data, Types, and Constants
 import {
   ENGAGEMENT_CHART_COLOR,
   getEngagementScore,
 } from '@/app/constants/constants'
-import { initialParticipants } from '@/app/data/data'
+import { initialParticipants, salvageItems } from '@/app/data/data'
 import { EngagementData, Message, Participant } from '@/app/types/types'
 import { getNextSimulationStep } from '@/lib/simulation/simulation-manager'
+
+type Change = {
+  item: { name: string; emoji: string }
+  fromRank: number
+  toRank: number
+}
 
 export default function BreakoutRoomSimulator() {
   // State variables
@@ -62,10 +59,23 @@ export default function BreakoutRoomSimulator() {
       action: string
       message?: string
       thinking: string
+      decision: string
       engagementScore: number
       cameraStatus: boolean
+      prompt: string
     }[]
   >([])
+
+  // State to track the current ranking of survival items
+  const [itemRanking, setItemRanking] = useState<
+    ((typeof salvageItems)[0] | undefined)[]
+  >([])
+  const [proposedChanges, setProposedChanges] = useState<Change[]>([])
+
+  // Add this with other state variables at the top
+  const [loadingButton, setLoadingButton] = useState<
+    'next' | 'play' | 'save' | null
+  >(null)
 
   // Function to get the latest engagement score for a participant
   const getLatestEngagement = (participantId: number) => {
@@ -75,11 +85,10 @@ export default function BreakoutRoomSimulator() {
     return participantData[0]?.engagement ?? 0
   }
 
-  // Modify handleNextStep to be async and use the LLM
+  // Modify handleNextStep to handle ranking changes
   const handleNextStep = useCallback(async () => {
     if (isLoading) return
-    setIsLoading(true)
-
+    setLoadingButton('next')
     try {
       // Start the simulation if it hasn't started
       if (!hasStarted) {
@@ -89,6 +98,8 @@ export default function BreakoutRoomSimulator() {
       // Determine which participant's turn it is
       const currentParticipantId = (currentStep % participants.length) + 1
 
+      console.log('About to get next step...')
+
       // Get next step from LLM
       const step = await getNextSimulationStep(
         {
@@ -96,9 +107,79 @@ export default function BreakoutRoomSimulator() {
           currentTurn: currentStep,
           dialogueHistory,
           conversationContext,
+          currentRanking: itemRanking.filter(
+            (item): item is (typeof salvageItems)[0] => item !== undefined
+          ),
         },
         currentParticipantId
       )
+
+      // Move debug logs here, right after getting the step
+      console.log('Full step object:', JSON.stringify(step, null, 2))
+      console.log('Step ranking changes type:', typeof step.rankingChanges)
+      console.log('Is array?', Array.isArray(step.rankingChanges))
+
+      // Process any ranking changes requested by the agent
+      if (step.rankingChanges && step.rankingChanges.length > 0) {
+        console.log('Raw ranking changes:', step.rankingChanges)
+        console.log('Current itemRanking:', itemRanking)
+
+        const changes: Change[] = step.rankingChanges.map((change) => {
+          const salvageItem = salvageItems.find((item) =>
+            item.name.toLowerCase().includes(change.item.toLowerCase())
+          )
+
+          const existingItem = itemRanking.find(
+            (item) => item?.name === salvageItem?.name
+          )
+          const currentRanking = existingItem
+            ? itemRanking.findIndex(
+                (item) => item?.name === salvageItem?.name
+              ) + 1
+            : 0
+
+          return {
+            item: {
+              name: salvageItem?.name || change.item,
+              emoji: salvageItem?.emoji || '',
+            },
+            fromRank: currentRanking,
+            toRank: change.newRank,
+          }
+        })
+
+        const newRanking = [...itemRanking]
+        changes.forEach((change) => {
+          const item = {
+            name: change.item.name,
+            emoji: change.item.emoji,
+          }
+
+          // Remove the item from its old position if it exists
+          const oldIndex = newRanking.findIndex(
+            (rankItem) => rankItem?.name === item.name
+          )
+          if (oldIndex !== -1) {
+            newRanking[oldIndex] = undefined
+          }
+
+          // Place the item in its new position
+          const targetIndex = change.toRank - 1
+          newRanking[targetIndex] = {
+            id: salvageItems.find((i) => i.name === change.item.name)?.id || 0,
+            name: change.item.name,
+            emoji: change.item.emoji,
+            initialRank: change.toRank,
+          }
+        })
+        setItemRanking(newRanking)
+
+        setProposedChanges(changes)
+      } else {
+        setProposedChanges([])
+      }
+
+      console.log('itemRanking after setting:', itemRanking)
 
       // Update participants state
       setParticipants((prevParticipants) =>
@@ -169,10 +250,12 @@ export default function BreakoutRoomSimulator() {
           action: step.action,
           message: step.message,
           thinking: step.thinking || '',
+          decision: step.action,
           engagementScore: newEngagement,
           cameraStatus:
             participants.find((p) => p.id === step.participantId)?.cameraOn ||
             false,
+          prompt: step.prompt || '',
         },
       ])
 
@@ -186,6 +269,7 @@ export default function BreakoutRoomSimulator() {
       )
       setIsPlaying(false)
     } finally {
+      setLoadingButton(null)
       setIsLoading(false)
     }
   }, [
@@ -196,10 +280,12 @@ export default function BreakoutRoomSimulator() {
     isLoading,
     conversationContext,
     hasStarted,
+    itemRanking,
   ])
 
   // Handler to play the simulation automatically
   const handlePlaySimulation = () => {
+    setLoadingButton('play')
     setIsPlaying(true)
   }
 
@@ -228,6 +314,7 @@ export default function BreakoutRoomSimulator() {
 
   // Add function to end and save simulation
   const handleEndSimulation = async () => {
+    setLoadingButton('save')
     try {
       const response = await fetch('/api/simulations', {
         method: 'POST',
@@ -250,51 +337,38 @@ export default function BreakoutRoomSimulator() {
     } catch (error) {
       console.error('Error saving simulation:', error)
       alert('Failed to save simulation')
+    } finally {
+      setLoadingButton(null)
     }
   }
+
+  // Add this near your other useEffects
+  useEffect(() => {
+    console.log('itemRanking changed:', itemRanking)
+  }, [itemRanking])
 
   return (
     <div className='h-screen p-6'>
       <div className='flex gap-4 h-full'>
+        {/* Replace the existing ranking table with the new component */}
+        <SurvivalItemRanking
+          itemRanking={itemRanking}
+          currentStep={currentStep}
+        />
+
         {/* Left Panel */}
-        <Card className='flex-grow flex flex-col shadow-none w-[60%]'>
+        <Card className='flex-grow flex flex-col shadow-none w-[45%]'>
           <CardContent className='flex-1 flex flex-col p-4 overflow-hidden'>
             {/* Participants Display */}
             <div className='grid grid-cols-2 gap-6 mb-6 min-h-fit'>
               {participants.map((participant) => (
-                <div key={participant.id} className='relative'>
-                  <div
-                    className={`aspect-video bg-muted rounded-lg flex items-center justify-center ${
-                      currentAgent?.id === participant.id
-                        ? `ring-2 ring-[${ENGAGEMENT_CHART_COLOR}] ring-opacity-75`
-                        : ''
-                    }`}
-                  >
-                    {participant.cameraOn ? (
-                      <div className='w-full h-full'>
-                        <Avatar className='w-full h-full rounded-lg'>
-                          <AvatarImage
-                            src={participant.avatar}
-                            alt={participant.name}
-                            className='object-cover w-full h-full'
-                          />
-                          <AvatarFallback>{participant.name[0]}</AvatarFallback>
-                        </Avatar>
-                      </div>
-                    ) : (
-                      <CameraOff
-                        className='w-16 h-16 text-muted-foreground'
-                        strokeWidth={1.5}
-                      />
-                    )}
-                  </div>
-                  <div className='absolute top-2 left-2 bg-background/80 px-2 py-1 rounded text-sm'>
-                    {participant.name}
-                  </div>
-                  <div className='absolute top-2 right-2 bg-background/80 px-2 py-1 rounded text-sm'>
-                    Engagement: {getLatestEngagement(participant.id)}%
-                  </div>
-                </div>
+                <ParticipantVideo
+                  key={participant.id}
+                  participant={participant}
+                  isCurrentAgent={currentAgent?.id === participant.id}
+                  latestEngagement={getLatestEngagement(participant.id)}
+                  engagementChartColor={ENGAGEMENT_CHART_COLOR}
+                />
               ))}
             </div>
             {/* Dialogue Section */}
@@ -332,31 +406,17 @@ export default function BreakoutRoomSimulator() {
                     {messages.map((message) => {
                       const participant = participants.find(
                         (p) => p.id === message.participantId
-                      )!
+                      )
+
+                      // Skip rendering if participant not found
+                      if (!participant) return null
+
                       return (
-                        <div
+                        <MessageItem
                           key={message.id}
-                          className='flex items-start space-x-4 mb-4'
-                        >
-                          <Avatar className='h-10 w-10'>
-                            <AvatarImage
-                              src={participant.avatar}
-                              alt={participant.name}
-                              className='object-cover'
-                            />
-                            <AvatarFallback>
-                              {participant.name[0]}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className='space-y-1'>
-                            <p className='text-sm font-medium leading-none'>
-                              {participant.name}
-                            </p>
-                            <p className='text-sm text-muted-foreground'>
-                              {message.content}
-                            </p>
-                          </div>
-                        </div>
+                          message={message}
+                          participant={participant}
+                        />
                       )
                     })}
                   </ScrollArea>
@@ -364,171 +424,38 @@ export default function BreakoutRoomSimulator() {
               </CardContent>
             </Card>
           </CardContent>
+
           {/* Control Buttons */}
-          <CardFooter className='flex justify-between items-center'>
-            <Button
-              onClick={() => handleNextStep()}
-              disabled={
-                isPlaying ||
-                isLoading ||
-                (!hasStarted && !conversationContext.trim())
-              }
-            >
-              {!hasStarted ? (
-                'Start Simulation'
-              ) : isLoading ? (
-                'Processing...'
-              ) : (
-                <>
-                  <SkipForward className='mr-2 h-4 w-4' /> Next Step
-                </>
-              )}
-            </Button>
-            <div className='text-sm font-medium'>Turn: {currentStep}</div>
-            <Button
-              onClick={handlePlaySimulation}
-              disabled={isPlaying || isLoading || !hasStarted}
-            >
-              <Play className='mr-2 h-4 w-4' /> Play Simulation
-            </Button>
-            <Button
-              onClick={handleEndSimulation}
-              disabled={
-                !hasStarted || isLoading || simulationTurns.length === 0
-              }
-              variant='secondary'
-            >
-              End & Save Simulation
-            </Button>
+          <CardFooter>
+            <SimulationControls
+              onNextStep={handleNextStep}
+              onPlaySimulation={handlePlaySimulation}
+              onEndSimulation={handleEndSimulation}
+              isLoading={isLoading}
+              isPlaying={isPlaying}
+              hasStarted={hasStarted}
+              currentStep={currentStep}
+              loadingButton={loadingButton}
+              conversationContext={conversationContext}
+              simulationTurns={simulationTurns}
+            />
           </CardFooter>
         </Card>
 
         {/* Right Panel - Agent Analysis */}
-        <Card className='w-[40%] max-w-xl flex flex-col shadow-none'>
+        <Card className='w-1/4 flex flex-col shadow-none'>
           <CardHeader className='flex-none'>
             <CardTitle>Agent Analysis</CardTitle>
           </CardHeader>
           <CardContent className='flex-1 overflow-y-auto'>
-            <div className='space-y-6'>
-              {currentAgent && (
-                <>
-                  {/* Current Agent Info */}
-                  <div className='flex items-center space-x-4'>
-                    <Avatar className='w-12 h-12'>
-                      <AvatarImage
-                        src={currentAgent.avatar}
-                        alt={currentAgent.name}
-                        className='object-cover'
-                      />
-                      <AvatarFallback>{currentAgent.name[0]}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <h3 className='font-semibold text-lg'>
-                        {currentAgent.name}
-                      </h3>
-                      <p className='text-sm text-muted-foreground'>
-                        Current Agent
-                      </p>
-                    </div>
-                  </div>
-                  {/* Agent Details */}
-                  <div className='space-y-4'>
-                    <div className='space-y-2'>
-                      <h4 className='font-medium flex items-center'>
-                        <Brain className='w-4 h-4 mr-2' /> Thinking Process
-                      </h4>
-                      <p className='text-sm bg-muted p-2 rounded'>
-                        {currentThinking}
-                      </p>
-                    </div>
-                    <div className='space-y-2'>
-                      <h4 className='font-medium flex items-center'>
-                        <Activity className='w-4 h-4 mr-2' /> Current Engagement
-                      </h4>
-                      <div className='flex items-center space-x-2'>
-                        <Progress
-                          value={
-                            currentAgent
-                              ? getLatestEngagement(currentAgent.id)
-                              : 0
-                          }
-                          max={100}
-                          className='flex-grow h-2'
-                        />
-                        <span className='text-sm font-medium'>
-                          {currentAgent
-                            ? getLatestEngagement(currentAgent.id)
-                            : 0}
-                          %
-                        </span>
-                      </div>
-                    </div>
-                    <div className='space-y-2'>
-                      <h4 className='font-medium flex items-center'>
-                        <MessageSquare className='w-4 h-4 mr-2' /> Decision
-                      </h4>
-                      <p className='text-sm bg-muted p-2 rounded'>
-                        {currentDecision}
-                      </p>
-                    </div>
-                  </div>
-                  <Separator />
-                  {/* Agent Metrics */}
-                  <div>
-                    <h4 className='font-medium mb-2 flex items-center'>
-                      <BarChart className='w-4 h-4 mr-2' /> Agent Metrics
-                    </h4>
-                    <div className='grid grid-cols-2 gap-3'>
-                      <div className='bg-muted rounded-lg p-2'>
-                        <p className='text-xs text-muted-foreground mb-1'>
-                          Words spoken
-                        </p>
-                        <p className='text-lg font-bold'>
-                          {currentAgent.wordsSpoken}
-                        </p>
-                      </div>
-                      <div className='bg-muted rounded-lg p-2'>
-                        <p className='text-xs text-muted-foreground mb-1'>
-                          Times inactive
-                        </p>
-                        <p className='text-lg font-bold'>
-                          {currentAgent.timesDoingNothing}
-                        </p>
-                      </div>
-                      <div className='bg-muted rounded-lg p-2'>
-                        <p className='text-xs text-muted-foreground mb-1'>
-                          Camera toggles
-                        </p>
-                        <p className='text-lg font-bold'>
-                          {currentAgent.cameraToggles}
-                        </p>
-                      </div>
-                      <div className='bg-muted rounded-lg p-2'>
-                        <p className='text-xs text-muted-foreground mb-1'>
-                          Participation
-                        </p>
-                        <p className='text-lg font-bold'>
-                          {(currentAgent.participationRate * 100).toFixed(0)}%
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  <Separator />
-                  {/* Engagement Chart */}
-                  <div>
-                    <h4 className='font-medium mb-2 flex items-center'>
-                      <Activity className='w-4 h-4 mr-2' /> Engagement Over Time
-                    </h4>
-                    <div className='h-[250px]'>
-                      <EngagementChart
-                        data={engagementData}
-                        agentId={currentAgent.id}
-                      />
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
+            <AgentAnalysis
+              currentAgent={currentAgent}
+              currentThinking={currentThinking}
+              currentDecision={currentDecision}
+              getLatestEngagement={getLatestEngagement}
+              proposedChanges={proposedChanges}
+              engagementData={engagementData}
+            />
           </CardContent>
         </Card>
       </div>

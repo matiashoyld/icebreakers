@@ -47,6 +47,7 @@ model SimulationTurn {
   decision               String
   engagementScore        Float
   cameraStatus           Boolean               // Camera status at this turn
+  prompt                 String                // The prompt used to generate this turn's response
 
   @@index([simulationId])
   @@index([participantId])
