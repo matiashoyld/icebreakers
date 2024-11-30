@@ -13,7 +13,7 @@ Output format -- output your response in json with the following fields:
   "message": "message content if action is speak, otherwise null"
 }
 
-###
+<commentblockmarker>###</commentblockmarker>
 
 You are an AI agent participating in a video conversation. Based on your personality, the context, and the dialogue history, you need to decide what action to take next.
 
