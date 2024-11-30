@@ -1,5 +1,6 @@
 'use client'
 
+import { useToast } from '@/hooks/use-toast'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 // UI Components
@@ -20,6 +21,7 @@ import { ParticipantVideo } from '@/components/ParticipantVideo'
 import { ScenarioSelector, type Scenario } from '@/components/ScenarioSelector'
 import { SimulationControls } from '@/components/SimulationControls'
 import { SurvivalItemRanking } from '@/components/SurvivalItemRanking'
+import { Toaster } from '@/components/ui/toaster'
 
 // Data, Types, and Constants
 import {
@@ -79,6 +81,8 @@ export default function BreakoutRoomSimulator() {
   const [selectedScenario, setSelectedScenario] = useState<Scenario | null>(
     null
   )
+
+  const { toast } = useToast()
 
   // Function to get the latest engagement score for a participant
   const getLatestEngagement = (participantId: number) => {
@@ -331,10 +335,19 @@ export default function BreakoutRoomSimulator() {
       }
 
       const { id } = await response.json()
-      alert(`Simulation saved successfully! ID: ${id}`)
+
+      toast({
+        title: 'Simulation Saved',
+        description: `Simulation #${id} has been saved successfully.`,
+        className: 'border-[0.5px] border-black bg-white',
+      })
     } catch (error) {
       console.error('Error saving simulation:', error)
-      alert('Failed to save simulation')
+      toast({
+        title: 'Error',
+        description: 'Failed to save simulation. Please try again.',
+        variant: 'destructive',
+      })
     } finally {
       setLoadingButton(null)
     }
@@ -441,6 +454,7 @@ export default function BreakoutRoomSimulator() {
           </CardContent>
         </Card>
       </div>
+      <Toaster />
     </div>
   )
 }
