@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button'
+import { SimulationTurn } from '@/lib/services/simulation-service'
 import { Loader2, Play, Save, SkipForward } from 'lucide-react'
 
 interface SimulationControlsProps {
@@ -11,7 +12,7 @@ interface SimulationControlsProps {
   currentStep: number
   loadingButton: 'next' | 'play' | 'save' | null
   conversationContext: string
-  simulationTurns: any[]
+  simulationTurns: SimulationTurn[]
 }
 
 export function SimulationControls({

@@ -1,6 +1,5 @@
 import { generatePrompt } from '@/lib/llm/openai'
 import { TURN_PROMPT } from '@/lib/llm/prompts/turn-prompt'
-import { SimulationContext } from '@/lib/simulation/simulation-manager'
 import { extractFirstJsonDict } from '@/lib/utils/json-parsers'
 import { NextResponse } from 'next/server'
 import OpenAI from 'openai'
@@ -23,8 +22,7 @@ export async function POST(request: Request) {
     const openai = await getOpenAIClient()
 
     const body = await request.json()
-    const { context, currentParticipantId, promptInputs } = body as {
-      context: SimulationContext
+    const { currentParticipantId, promptInputs } = body as {
       currentParticipantId: number
       promptInputs: string[]
     }
