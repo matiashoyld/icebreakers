@@ -3,8 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 // UI Components
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
@@ -12,41 +10,16 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { Progress } from '@/components/ui/progress'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Separator } from '@/components/ui/separator'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
-import {
-  Tooltip,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
-import { motion } from 'framer-motion'
 // Icons
-import {
-  Activity,
-  ArrowUpDown,
-  BarChart,
-  Brain,
-  CameraOff,
-  Loader2,
-  MessageSquare,
-  Play,
-  Save,
-  SkipForward,
-} from 'lucide-react'
 
 // Custom Components
-import { EngagementChart } from '@/components/EngagementChart'
-import { ProposedChanges } from '@/components/ProposedChanges'
+import { AgentAnalysis } from '@/components/AgentAnalysis'
+import { MessageItem } from '@/components/Message'
+import { ParticipantVideo } from '@/components/ParticipantVideo'
+import { SimulationControls } from '@/components/SimulationControls'
+import { SurvivalItemRanking } from '@/components/SurvivalItemRanking'
 
 // Data, Types, and Constants
 import {
@@ -377,68 +350,11 @@ export default function BreakoutRoomSimulator() {
   return (
     <div className='h-screen p-6'>
       <div className='flex gap-4 h-full'>
-        {/* Add Ranking Table Panel */}
-        <Card className='w-1/4 shadow-none overflow-hidden flex flex-col'>
-          <CardHeader>
-            <CardTitle>Survival Items Ranking</CardTitle>
-          </CardHeader>
-          <CardContent className='flex-grow overflow-hidden'>
-            <ScrollArea className='h-[calc(100vh-10rem)] w-full'>
-              <Table className='w-full'>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className='text-xs font-medium'>Rank</TableHead>
-                    <TableHead className='text-xs font-medium'>Item</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {Array.from({ length: 15 }, (_, index) => {
-                    const rankedItem = itemRanking[index]
-                    return (
-                      <TooltipProvider key={index}>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <TableRow
-                              className={
-                                index === currentStep - 1 ? 'bg-muted/50' : ''
-                              }
-                            >
-                              <TableCell className='py-1'>
-                                {index + 1}
-                              </TableCell>
-                              <TableCell className='py-1'>
-                                {rankedItem ? (
-                                  <motion.div
-                                    initial={{
-                                      backgroundColor:
-                                        index === currentStep - 1
-                                          ? 'rgba(59, 130, 246, 0.5)'
-                                          : 'rgba(0, 0, 0, 0)',
-                                    }}
-                                    animate={{
-                                      backgroundColor: 'rgba(0, 0, 0, 0)',
-                                    }}
-                                    transition={{ duration: 1 }}
-                                  >
-                                    {rankedItem.emoji} {rankedItem.name}
-                                  </motion.div>
-                                ) : (
-                                  <span className='text-muted-foreground italic'>
-                                    Not ranked yet
-                                  </span>
-                                )}
-                              </TableCell>
-                            </TableRow>
-                          </TooltipTrigger>
-                        </Tooltip>
-                      </TooltipProvider>
-                    )
-                  })}
-                </TableBody>
-              </Table>
-            </ScrollArea>
-          </CardContent>
-        </Card>
+        {/* Replace the existing ranking table with the new component */}
+        <SurvivalItemRanking
+          itemRanking={itemRanking}
+          currentStep={currentStep}
+        />
 
         {/* Left Panel */}
         <Card className='flex-grow flex flex-col shadow-none w-[45%]'>
@@ -446,39 +362,13 @@ export default function BreakoutRoomSimulator() {
             {/* Participants Display */}
             <div className='grid grid-cols-2 gap-6 mb-6 min-h-fit'>
               {participants.map((participant) => (
-                <div key={participant.id} className='relative'>
-                  <div
-                    className={`aspect-video bg-muted rounded-lg flex items-center justify-center ${
-                      currentAgent?.id === participant.id
-                        ? `ring-2 ring-[${ENGAGEMENT_CHART_COLOR}] ring-opacity-75`
-                        : ''
-                    }`}
-                  >
-                    {participant.cameraOn ? (
-                      <div className='w-full h-full'>
-                        <Avatar className='w-full h-full rounded-lg'>
-                          <AvatarImage
-                            src={participant.avatar}
-                            alt={participant.name}
-                            className='object-cover w-full h-full'
-                          />
-                          <AvatarFallback>{participant.name[0]}</AvatarFallback>
-                        </Avatar>
-                      </div>
-                    ) : (
-                      <CameraOff
-                        className='w-16 h-16 text-muted-foreground'
-                        strokeWidth={1.5}
-                      />
-                    )}
-                  </div>
-                  <div className='absolute top-2 left-2 bg-background/80 px-2 py-1 rounded text-sm'>
-                    {participant.name}
-                  </div>
-                  <div className='absolute top-2 right-2 bg-background/80 px-2 py-1 rounded text-sm'>
-                    Engagement: {getLatestEngagement(participant.id)}%
-                  </div>
-                </div>
+                <ParticipantVideo
+                  key={participant.id}
+                  participant={participant}
+                  isCurrentAgent={currentAgent?.id === participant.id}
+                  latestEngagement={getLatestEngagement(participant.id)}
+                  engagementChartColor={ENGAGEMENT_CHART_COLOR}
+                />
               ))}
             </div>
             {/* Dialogue Section */}
@@ -522,29 +412,11 @@ export default function BreakoutRoomSimulator() {
                       if (!participant) return null
 
                       return (
-                        <div
+                        <MessageItem
                           key={message.id}
-                          className='flex items-start space-x-4 mb-4'
-                        >
-                          <Avatar className='h-10 w-10'>
-                            <AvatarImage
-                              src={participant.avatar}
-                              alt={participant.name}
-                              className='object-cover'
-                            />
-                            <AvatarFallback>
-                              {participant.name[0]}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className='space-y-1'>
-                            <p className='text-sm font-medium leading-none'>
-                              {participant.name}
-                            </p>
-                            <p className='text-sm text-muted-foreground'>
-                              {message.content}
-                            </p>
-                          </div>
-                        </div>
+                          message={message}
+                          participant={participant}
+                        />
                       )
                     })}
                   </ScrollArea>
@@ -552,88 +424,21 @@ export default function BreakoutRoomSimulator() {
               </CardContent>
             </Card>
           </CardContent>
+
           {/* Control Buttons */}
-          <CardFooter className='flex items-center justify-center gap-6 border-t py-4'>
-            <div className='flex items-center gap-3'>
-              <Button
-                onClick={() => handleNextStep()}
-                disabled={
-                  isLoading ||
-                  isPlaying ||
-                  (!hasStarted && !conversationContext.trim())
-                }
-                className='w-28 h-9'
-                variant={!hasStarted ? 'default' : 'ghost'}
-              >
-                {!hasStarted ? (
-                  <>
-                    <Play className='mr-2 h-4 w-4' />
-                    Start
-                  </>
-                ) : loadingButton === 'next' ? (
-                  <>
-                    <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-                    Wait...
-                  </>
-                ) : (
-                  <>
-                    <SkipForward className='mr-2 h-4 w-4' />
-                    Next
-                  </>
-                )}
-              </Button>
-
-              <Button
-                onClick={handlePlaySimulation}
-                disabled={isLoading || !hasStarted}
-                className='w-28 h-9'
-                variant='ghost'
-              >
-                {loadingButton === 'play' ? (
-                  <>
-                    <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-                    Wait...
-                  </>
-                ) : (
-                  <>
-                    <Play className='mr-2 h-4 w-4' />
-                    Play
-                  </>
-                )}
-              </Button>
-            </div>
-
-            <div className='flex items-center gap-3'>
-              <div className='px-4 py-1.5 bg-muted rounded-full'>
-                <span className='text-sm font-medium'>
-                  Turn{' '}
-                  <span className='text-primary font-semibold'>
-                    {currentStep}
-                  </span>
-                </span>
-              </div>
-
-              <Button
-                onClick={handleEndSimulation}
-                disabled={
-                  isLoading || !hasStarted || simulationTurns.length === 0
-                }
-                variant='ghost'
-                className='w-28 h-9'
-              >
-                {loadingButton === 'save' ? (
-                  <>
-                    <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-                    Wait...
-                  </>
-                ) : (
-                  <>
-                    <Save className='mr-2 h-4 w-4' />
-                    Save
-                  </>
-                )}
-              </Button>
-            </div>
+          <CardFooter>
+            <SimulationControls
+              onNextStep={handleNextStep}
+              onPlaySimulation={handlePlaySimulation}
+              onEndSimulation={handleEndSimulation}
+              isLoading={isLoading}
+              isPlaying={isPlaying}
+              hasStarted={hasStarted}
+              currentStep={currentStep}
+              loadingButton={loadingButton}
+              conversationContext={conversationContext}
+              simulationTurns={simulationTurns}
+            />
           </CardFooter>
         </Card>
 
@@ -643,139 +448,14 @@ export default function BreakoutRoomSimulator() {
             <CardTitle>Agent Analysis</CardTitle>
           </CardHeader>
           <CardContent className='flex-1 overflow-y-auto'>
-            <div className='space-y-6'>
-              {currentAgent && (
-                <>
-                  {/* Current Agent Info */}
-                  <div className='flex items-center space-x-4'>
-                    <Avatar className='w-12 h-12'>
-                      <AvatarImage
-                        src={currentAgent.avatar}
-                        alt={currentAgent.name}
-                        className='object-cover'
-                      />
-                      <AvatarFallback>{currentAgent.name[0]}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <h3 className='font-semibold text-lg'>
-                        {currentAgent.name}
-                      </h3>
-                      <p className='text-sm text-muted-foreground'>
-                        Current Agent
-                      </p>
-                    </div>
-                  </div>
-                  {/* Agent Details */}
-                  <div className='space-y-4'>
-                    <div className='space-y-2'>
-                      <h4 className='font-medium flex items-center'>
-                        <Brain className='w-4 h-4 mr-2' /> Thinking Process
-                      </h4>
-                      <p className='text-sm bg-muted p-2 rounded'>
-                        {currentThinking}
-                      </p>
-                    </div>
-                    <div className='space-y-2'>
-                      <h4 className='font-medium flex items-center'>
-                        <Activity className='w-4 h-4 mr-2' /> Current Engagement
-                      </h4>
-                      <div className='flex items-center space-x-2'>
-                        <Progress
-                          value={
-                            currentAgent
-                              ? getLatestEngagement(currentAgent.id)
-                              : 0
-                          }
-                          max={100}
-                          className='flex-grow h-2'
-                        />
-                        <span className='text-sm font-medium'>
-                          {currentAgent
-                            ? getLatestEngagement(currentAgent.id)
-                            : 0}
-                          %
-                        </span>
-                      </div>
-                    </div>
-                    <div className='space-y-2'>
-                      <h4 className='font-medium flex items-center'>
-                        <MessageSquare className='w-4 h-4 mr-2' /> Decision
-                      </h4>
-                      <p className='text-sm bg-muted p-2 rounded'>
-                        {currentDecision}
-                      </p>
-                    </div>
-                    <div className='space-y-1'>
-                      <h4 className='text-sm font-medium flex items-center'>
-                        <ArrowUpDown className='w-4 h-4 mr-2' /> Proposed
-                        Changes
-                      </h4>
-                      {proposedChanges.length > 0 ? (
-                        <ProposedChanges changes={proposedChanges} />
-                      ) : (
-                        <p className='text-xs bg-muted p-2 rounded'>
-                          No changes proposed at this time.
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <Separator />
-                  {/* Agent Metrics */}
-                  <div>
-                    <h4 className='font-medium mb-2 flex items-center'>
-                      <BarChart className='w-4 h-4 mr-2' /> Agent Metrics
-                    </h4>
-                    <div className='grid grid-cols-2 gap-3'>
-                      <div className='bg-muted rounded-lg p-2'>
-                        <p className='text-xs text-muted-foreground mb-1'>
-                          Words spoken
-                        </p>
-                        <p className='text-lg font-bold'>
-                          {currentAgent.wordsSpoken}
-                        </p>
-                      </div>
-                      <div className='bg-muted rounded-lg p-2'>
-                        <p className='text-xs text-muted-foreground mb-1'>
-                          Times inactive
-                        </p>
-                        <p className='text-lg font-bold'>
-                          {currentAgent.timesDoingNothing}
-                        </p>
-                      </div>
-                      <div className='bg-muted rounded-lg p-2'>
-                        <p className='text-xs text-muted-foreground mb-1'>
-                          Camera toggles
-                        </p>
-                        <p className='text-lg font-bold'>
-                          {currentAgent.cameraToggles}
-                        </p>
-                      </div>
-                      <div className='bg-muted rounded-lg p-2'>
-                        <p className='text-xs text-muted-foreground mb-1'>
-                          Participation
-                        </p>
-                        <p className='text-lg font-bold'>
-                          {(currentAgent.participationRate * 100).toFixed(0)}%
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  <Separator />
-                  {/* Engagement Chart */}
-                  <div>
-                    <h4 className='font-medium mb-2 flex items-center'>
-                      <Activity className='w-4 h-4 mr-2' /> Engagement Over Time
-                    </h4>
-                    <div className='h-[250px]'>
-                      <EngagementChart
-                        data={engagementData}
-                        agentId={currentAgent.id}
-                      />
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
+            <AgentAnalysis
+              currentAgent={currentAgent}
+              currentThinking={currentThinking}
+              currentDecision={currentDecision}
+              getLatestEngagement={getLatestEngagement}
+              proposedChanges={proposedChanges}
+              engagementData={engagementData}
+            />
           </CardContent>
         </Card>
       </div>
