@@ -20,6 +20,7 @@ export type SimulationStep = {
   action: 'speak' | 'toggleCamera' | 'doNothing'
   message?: string
   thinking?: string
+  prompt?: string
 }
 
 /**

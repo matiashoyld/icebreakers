@@ -10,6 +10,7 @@ export type SimulationTurn = {
   decision: string
   engagementScore: number
   cameraStatus: boolean
+  prompt: string
 }
 
 export type SaveSimulationParams = {
@@ -64,6 +65,7 @@ export async function saveSimulation({
             decision: turn.action,
             engagementScore: turn.engagementScore,
             cameraStatus: turn.cameraStatus,
+            prompt: turn.prompt,
           },
         })
       )

@@ -62,8 +62,10 @@ export default function BreakoutRoomSimulator() {
       action: string
       message?: string
       thinking: string
+      decision: string
       engagementScore: number
       cameraStatus: boolean
+      prompt: string
     }[]
   >([])
 
@@ -169,10 +171,12 @@ export default function BreakoutRoomSimulator() {
           action: step.action,
           message: step.message,
           thinking: step.thinking || '',
+          decision: step.action,
           engagementScore: newEngagement,
           cameraStatus:
             participants.find((p) => p.id === step.participantId)?.cameraOn ||
             false,
+          prompt: step.prompt || '',
         },
       ])
 
@@ -332,7 +336,11 @@ export default function BreakoutRoomSimulator() {
                     {messages.map((message) => {
                       const participant = participants.find(
                         (p) => p.id === message.participantId
-                      )!
+                      )
+
+                      // Skip rendering if participant not found
+                      if (!participant) return null
+
                       return (
                         <div
                           key={message.id}

@@ -50,6 +50,8 @@ export async function POST(request: Request) {
       TURN_PROMPT
     )
 
+    console.log('Filled prompt:', filledPrompt)
+
     // Get response from OpenAI
     const response = await openai.chat.completions.create({
       model: 'gpt-4o-mini', // Updated to use a valid model name
@@ -67,13 +69,14 @@ export async function POST(request: Request) {
       throw new Error('Failed to parse LLM response')
     }
 
-    // Convert to SimulationStep format
+    // Convert to SimulationStep format before returning
     const step = {
       participantId: currentParticipantId,
       action: parsed.action as 'speak' | 'toggleCamera' | 'doNothing',
       message:
         parsed.action === 'speak' ? (parsed.message as string) : undefined,
       thinking: parsed.thinking as string,
+      prompt: filledPrompt,
     }
 
     return NextResponse.json(step)
