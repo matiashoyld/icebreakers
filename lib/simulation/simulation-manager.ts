@@ -1,6 +1,5 @@
 import { salvageItems } from '@/app/data/data'
 import { Participant, SimulationStep } from '@/app/types/types'
-import { generatePrompt } from '@/lib/llm/openai'
 import {
   baselinePrompt,
   gamificationPrompt,
@@ -69,8 +68,6 @@ export async function getNextSimulationStep(
     input.dialogueHistory.join('\n'),
     currentRankingText,
   ]
-
-  const filledPrompt = await generatePrompt(promptInputs, prompt)
 
   const response = await fetch('/api/simulation', {
     method: 'POST',

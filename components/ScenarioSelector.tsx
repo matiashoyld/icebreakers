@@ -102,7 +102,12 @@ interface ScenarioSelectorProps {
   onSelectScenario: (scenario: Scenario) => void
 }
 
-function getScenarioIcon(id: Scenario['id'], props: any) {
+type IconProps = {
+  size: number
+  className: string
+}
+
+function getScenarioIcon(id: Scenario['id'], props: IconProps) {
   switch (id) {
     case 'baseline':
       return <Target {...props} />
@@ -136,7 +141,7 @@ export function ScenarioSelector({
                     ? 'border-primary shadow-sm'
                     : 'hover:border-muted-foreground/25'
                 )}
-                onClick={() => onSelectScenario(scenario)}
+                onClick={() => onSelectScenario(scenario as Scenario)}
               >
                 <div className='flex items-center gap-2 w-full'>
                   {getScenarioIcon(scenario.id, {
