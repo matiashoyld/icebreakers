@@ -15,7 +15,21 @@ import {
 import { Progress } from '@/components/ui/progress'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
+import {
+  Tooltip,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+import { motion } from 'framer-motion'
 // Icons
 import {
   Activity,
@@ -35,7 +49,7 @@ import {
   ENGAGEMENT_CHART_COLOR,
   getEngagementScore,
 } from '@/app/constants/constants'
-import { initialParticipants } from '@/app/data/data'
+import { initialParticipants, salvageItems } from '@/app/data/data'
 import { EngagementData, Message, Participant } from '@/app/types/types'
 import { getNextSimulationStep } from '@/lib/simulation/simulation-manager'
 
@@ -69,6 +83,9 @@ export default function BreakoutRoomSimulator() {
     }[]
   >([])
 
+  // State to track the current ranking of survival items
+  const [itemRanking, setItemRanking] = useState<typeof salvageItems>([])
+
   // Function to get the latest engagement score for a participant
   const getLatestEngagement = (participantId: number) => {
     const participantData = engagementData
@@ -77,7 +94,7 @@ export default function BreakoutRoomSimulator() {
     return participantData[0]?.engagement ?? 0
   }
 
-  // Modify handleNextStep to be async and use the LLM
+  // Modify handleNextStep to handle ranking changes
   const handleNextStep = useCallback(async () => {
     if (isLoading) return
     setIsLoading(true)
@@ -91,6 +108,8 @@ export default function BreakoutRoomSimulator() {
       // Determine which participant's turn it is
       const currentParticipantId = (currentStep % participants.length) + 1
 
+      console.log('About to get next step...')
+
       // Get next step from LLM
       const step = await getNextSimulationStep(
         {
@@ -98,9 +117,47 @@ export default function BreakoutRoomSimulator() {
           currentTurn: currentStep,
           dialogueHistory,
           conversationContext,
+          currentRanking: itemRanking,
         },
         currentParticipantId
       )
+
+      // Move debug logs here, right after getting the step
+      console.log('Full step object:', JSON.stringify(step, null, 2))
+      console.log('Step ranking changes type:', typeof step.rankingChanges)
+      console.log('Is array?', Array.isArray(step.rankingChanges))
+
+      // Process any ranking changes requested by the agent
+      if (step.rankingChanges && step.rankingChanges.length > 0) {
+        console.log(
+          'Processing ranking changes:',
+          JSON.stringify(step.rankingChanges, null, 2)
+        )
+
+        // Create a new array with just the items being ranked
+        const newRanking = step.rankingChanges
+          .map((change) => {
+            // Find the item in salvageItems using case-insensitive comparison
+            // to handle variations in how the LLM might refer to items
+            const item = salvageItems.find(
+              (item) =>
+                item.name.toLowerCase() === change.item.toLowerCase() ||
+                item.name.toLowerCase() === `a ${change.item}`.toLowerCase()
+            )
+
+            if (!item) {
+              console.warn(`Item not found: ${change.item}`)
+              return null
+            }
+            return item
+          })
+          .filter((item): item is NonNullable<typeof item> => item !== null)
+
+        // Update the ranking state with the new order
+        setItemRanking(newRanking)
+      }
+
+      console.log('itemRanking after setting:', itemRanking)
 
       // Update participants state
       setParticipants((prevParticipants) =>
@@ -200,6 +257,7 @@ export default function BreakoutRoomSimulator() {
     isLoading,
     conversationContext,
     hasStarted,
+    itemRanking,
   ])
 
   // Handler to play the simulation automatically
@@ -257,11 +315,66 @@ export default function BreakoutRoomSimulator() {
     }
   }
 
+  // Add this near your other useEffects
+  useEffect(() => {
+    console.log('itemRanking changed:', itemRanking)
+  }, [itemRanking])
+
   return (
     <div className='h-screen p-6'>
       <div className='flex gap-4 h-full'>
+        {/* Add Ranking Table Panel */}
+        <Card className='w-1/4 shadow-none overflow-hidden flex flex-col h-[calc(100vh-2rem)]'>
+          <CardHeader>
+            <CardTitle className='text-lg'>Survival Items Ranking</CardTitle>
+          </CardHeader>
+          <CardContent className='flex-grow overflow-hidden'>
+            <ScrollArea className='h-[calc(100vh-10rem)] w-full'>
+              <Table className='w-full'>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className='text-xs font-medium'>Rank</TableHead>
+                    <TableHead className='text-xs font-medium'>Item</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody className='text-xs'>
+                  {itemRanking.map((item, index) => (
+                    <TooltipProvider key={item.id}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <TableRow
+                            className={
+                              index === currentStep - 1 ? 'bg-muted/50' : ''
+                            }
+                          >
+                            <TableCell className='py-1'>{index + 1}</TableCell>
+                            <TableCell className='py-1'>
+                              <motion.div
+                                initial={{
+                                  backgroundColor:
+                                    index === currentStep - 1
+                                      ? 'rgba(59, 130, 246, 0.5)'
+                                      : 'transparent',
+                                }}
+                                animate={{ backgroundColor: 'transparent' }}
+                                transition={{ duration: 1 }}
+                              >
+                                {item.emoji} {item.name}
+                              </motion.div>
+                            </TableCell>
+                          </TableRow>
+                        </TooltipTrigger>
+                      </Tooltip>
+                    </TooltipProvider>
+                  ))}
+                </TableBody>
+              </Table>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+
         {/* Left Panel */}
-        <Card className='flex-grow flex flex-col shadow-none w-[60%]'>
+        <Card className='flex-grow flex flex-col shadow-none w-[45%]'>
           <CardContent className='flex-1 flex flex-col p-4 overflow-hidden'>
             {/* Participants Display */}
             <div className='grid grid-cols-2 gap-6 mb-6 min-h-fit'>
@@ -412,7 +525,7 @@ export default function BreakoutRoomSimulator() {
         </Card>
 
         {/* Right Panel - Agent Analysis */}
-        <Card className='w-[40%] max-w-xl flex flex-col shadow-none'>
+        <Card className='w-[30%] flex flex-col shadow-none'>
           <CardHeader className='flex-none'>
             <CardTitle>Agent Analysis</CardTitle>
           </CardHeader>

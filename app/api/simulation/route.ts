@@ -23,47 +23,30 @@ export async function POST(request: Request) {
     const openai = await getOpenAIClient()
 
     const body = await request.json()
-    const { context, currentParticipantId } = body as {
+    const { context, currentParticipantId, promptInputs } = body as {
       context: SimulationContext
       currentParticipantId: number
+      promptInputs: string[]
     }
 
-    // Create context string about participants and their camera status
-    const participantsContext = context.participants
-      .map((p) => `${p.name}: Camera ${p.cameraOn ? 'ON' : 'OFF'}`)
-      .join('\n')
-
-    // Create dialogue history string
-    const dialogueString = context.dialogueHistory.map((msg) => msg).join('\n')
-
-    // For now, use empty string for agent persona (we'll add this later)
-    const agentPersona = ''
-
-    // Generate prompt using the template
-    const filledPrompt = await generatePrompt(
-      [
-        agentPersona,
-        participantsContext,
-        dialogueString,
-        context.conversationContext,
-      ],
-      TURN_PROMPT
-    )
+    // Generate prompt using the template and all inputs from the client
+    const filledPrompt = await generatePrompt(promptInputs, TURN_PROMPT)
 
     console.log('Filled prompt:', filledPrompt)
 
     // Get response from OpenAI
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini', // Updated to use a valid model name
+      model: 'gpt-4o-mini',
       messages: [{ role: 'user', content: filledPrompt }],
-      max_tokens: 1500,
+      max_tokens: 4096,
       temperature: 0.7,
     })
 
     const output = response.choices[0].message.content || ''
+    console.log('LLM Response:', output)
 
-    // Parse the response
     const parsed = extractFirstJsonDict(output)
+    console.log('Parsed Response:', parsed)
 
     if (!parsed) {
       throw new Error('Failed to parse LLM response')
@@ -77,7 +60,9 @@ export async function POST(request: Request) {
         parsed.action === 'speak' ? (parsed.message as string) : undefined,
       thinking: parsed.thinking as string,
       prompt: filledPrompt,
+      rankingChanges: parsed.rankingChanges,
     }
+    console.log('Step being returned:', step)
 
     return NextResponse.json(step)
   } catch (error) {

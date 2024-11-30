@@ -19,8 +19,10 @@ export type SimulationStep = {
   participantId: number
   action: 'speak' | 'toggleCamera' | 'doNothing'
   message?: string
-  thinking?: string
-  prompt?: string
+  thinking: string
+  prompt: string
+  /** Changes requested by the agent to the current item ranking */
+  rankingChanges?: { item: string; newRank: number }[]
 }
 
 /**
@@ -74,4 +76,14 @@ export type LLMResponse = {
     completionTokens: number
     totalTokens: number
   }
+}
+
+/**
+ * Represents a ranking change for an item.
+ */
+export interface RankingChange {
+  /** Must match exactly one of the salvageItems names (case-insensitive) */
+  item: string
+  /** The new position (1-based) where this item should be placed */
+  newRank: number
 }

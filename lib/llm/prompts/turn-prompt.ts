@@ -4,13 +4,21 @@ export const TURN_PROMPT = `
 !<INPUT 1>!: Context of the conversation (participants, camera status)
 !<INPUT 2>!: Dialogue history
 !<INPUT 3>!: Conversation context/topic
+!<INPUT 4>!: Current ranking of survival items (ordered list)
 
 [Output]
 Output format -- output your response in json with the following fields:
 {
   "thinking": "reasoning behind the chosen action",
   "action": "toggleCamera|speak|doNothing",
-  "message": "message content if action is speak, otherwise null"
+  "message": "message content if action is speak, otherwise null",
+  "rankingChanges": [
+    {
+      "item": "name of the item to move (must match exactly one of the items below)",
+      "newRank": number (1-15)
+    }
+    // ... can include multiple items to reorder. Can also be empty if no changes to ranking.
+  ]
 }
 
 <commentblockmarker>###</commentblockmarker>
@@ -50,6 +58,8 @@ ITEMS TO RANK (from most important #1 to least important #15):
 - 15 feet of nylon rope
 - 2 boxes of chocolate bars
 - An ocean fishing kit & pole
+
+IMPORTANT: When suggesting ranking changes, use the exact item names as listed above.
 ### End Scenario ###
 
 ### Begin Instructions ###
@@ -84,12 +94,23 @@ Maintain your persona's characteristics throughout the discussion. Your response
 !<INPUT 3>!
 ### End Topic and Objectives ###
 
+### Begin Current Ranking ###
+!<INPUT 4>!
+### End Current Ranking ###
+
 Based on the above information, decide on your next action. If you choose to speak, ensure your message matches your personality and fits naturally in the conversation while staying relevant to the given topic and objectives.
 
 Output your response in json with the following fields:
 {
   "thinking": "Explain your thought process and reasoning here",
   "action": "One of: toggleCamera, speak, or doNothing",
-  "message": "If action is speak, include your message here. Otherwise null"
+  "message": "If action is speak, include your message here. Otherwise null",
+  "rankingChanges": [
+    {
+      "item": "Must match exactly one of the item names listed above",
+      "newRank": number (1-15)
+    }
+    // ... can include multiple items to reorder. Can also be empty if no changes to ranking.
+  ]
 }
 `
