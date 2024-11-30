@@ -196,7 +196,6 @@ export default function BreakoutRoomSimulator() {
     isLoading,
     conversationContext,
     hasStarted,
-    simulationTurns,
   ])
 
   // Handler to play the simulation automatically
@@ -246,8 +245,8 @@ export default function BreakoutRoomSimulator() {
         throw new Error('Failed to save simulation')
       }
 
-      const data = await response.json()
-      alert('Simulation saved successfully!')
+      const { id } = await response.json()
+      alert(`Simulation saved successfully! ID: ${id}`)
     } catch (error) {
       console.error('Error saving simulation:', error)
       alert('Failed to save simulation')
