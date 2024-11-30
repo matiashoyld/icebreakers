@@ -55,6 +55,17 @@ export default function BreakoutRoomSimulator() {
   const [isLoading, setIsLoading] = useState(false)
   const [conversationContext, setConversationContext] = useState('')
   const [hasStarted, setHasStarted] = useState(false)
+  const [simulationTurns, setSimulationTurns] = useState<
+    {
+      turnNumber: number
+      participantId: number
+      action: string
+      message?: string
+      thinking: string
+      engagementScore: number
+      cameraStatus: boolean
+    }[]
+  >([])
 
   // Function to get the latest engagement score for a participant
   const getLatestEngagement = (participantId: number) => {
@@ -149,6 +160,22 @@ export default function BreakoutRoomSimulator() {
         },
       ])
 
+      // Store turn data
+      setSimulationTurns((prev) => [
+        ...prev,
+        {
+          turnNumber: currentStep + 1,
+          participantId: step.participantId,
+          action: step.action,
+          message: step.message,
+          thinking: step.thinking || '',
+          engagementScore: newEngagement,
+          cameraStatus:
+            participants.find((p) => p.id === step.participantId)?.cameraOn ||
+            false,
+        },
+      ])
+
       // Increment step
       setCurrentStep((prev) => prev + 1)
     } catch (error) {
@@ -169,6 +196,7 @@ export default function BreakoutRoomSimulator() {
     isLoading,
     conversationContext,
     hasStarted,
+    simulationTurns,
   ])
 
   // Handler to play the simulation automatically
@@ -198,6 +226,33 @@ export default function BreakoutRoomSimulator() {
       }
     }
   }, [messages])
+
+  // Add function to end and save simulation
+  const handleEndSimulation = async () => {
+    try {
+      const response = await fetch('/api/simulations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          context: conversationContext,
+          participants,
+          turns: simulationTurns,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to save simulation')
+      }
+
+      const data = await response.json()
+      alert('Simulation saved successfully!')
+    } catch (error) {
+      console.error('Error saving simulation:', error)
+      alert('Failed to save simulation')
+    }
+  }
 
   return (
     <div className='h-screen p-6'>
@@ -336,6 +391,15 @@ export default function BreakoutRoomSimulator() {
               disabled={isPlaying || isLoading || !hasStarted}
             >
               <Play className='mr-2 h-4 w-4' /> Play Simulation
+            </Button>
+            <Button
+              onClick={handleEndSimulation}
+              disabled={
+                !hasStarted || isLoading || simulationTurns.length === 0
+              }
+              variant='secondary'
+            >
+              End & Save Simulation
             </Button>
           </CardFooter>
         </Card>
