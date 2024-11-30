@@ -37,8 +37,10 @@ import {
   BarChart,
   Brain,
   CameraOff,
+  Loader2,
   MessageSquare,
   Play,
+  Save,
   SkipForward,
 } from 'lucide-react'
 
@@ -97,6 +99,11 @@ export default function BreakoutRoomSimulator() {
   >([])
   const [proposedChanges, setProposedChanges] = useState<Change[]>([])
 
+  // Add this with other state variables at the top
+  const [loadingButton, setLoadingButton] = useState<
+    'next' | 'play' | 'save' | null
+  >(null)
+
   // Function to get the latest engagement score for a participant
   const getLatestEngagement = (participantId: number) => {
     const participantData = engagementData
@@ -108,8 +115,7 @@ export default function BreakoutRoomSimulator() {
   // Modify handleNextStep to handle ranking changes
   const handleNextStep = useCallback(async () => {
     if (isLoading) return
-    setIsLoading(true)
-
+    setLoadingButton('next')
     try {
       // Start the simulation if it hasn't started
       if (!hasStarted) {
@@ -290,6 +296,7 @@ export default function BreakoutRoomSimulator() {
       )
       setIsPlaying(false)
     } finally {
+      setLoadingButton(null)
       setIsLoading(false)
     }
   }, [
@@ -305,6 +312,7 @@ export default function BreakoutRoomSimulator() {
 
   // Handler to play the simulation automatically
   const handlePlaySimulation = () => {
+    setLoadingButton('play')
     setIsPlaying(true)
   }
 
@@ -333,6 +341,7 @@ export default function BreakoutRoomSimulator() {
 
   // Add function to end and save simulation
   const handleEndSimulation = async () => {
+    setLoadingButton('save')
     try {
       const response = await fetch('/api/simulations', {
         method: 'POST',
@@ -355,6 +364,8 @@ export default function BreakoutRoomSimulator() {
     } catch (error) {
       console.error('Error saving simulation:', error)
       alert('Failed to save simulation')
+    } finally {
+      setLoadingButton(null)
     }
   }
 
@@ -367,9 +378,9 @@ export default function BreakoutRoomSimulator() {
     <div className='h-screen p-6'>
       <div className='flex gap-4 h-full'>
         {/* Add Ranking Table Panel */}
-        <Card className='w-1/4 shadow-none overflow-hidden flex flex-col h-[calc(100vh-2rem)]'>
+        <Card className='w-1/4 shadow-none overflow-hidden flex flex-col'>
           <CardHeader>
-            <CardTitle className='text-lg'>Survival Items Ranking</CardTitle>
+            <CardTitle>Survival Items Ranking</CardTitle>
           </CardHeader>
           <CardContent className='flex-grow overflow-hidden'>
             <ScrollArea className='h-[calc(100vh-10rem)] w-full'>
@@ -380,7 +391,7 @@ export default function BreakoutRoomSimulator() {
                     <TableHead className='text-xs font-medium'>Item</TableHead>
                   </TableRow>
                 </TableHeader>
-                <TableBody className='text-xs'>
+                <TableBody>
                   {Array.from({ length: 15 }, (_, index) => {
                     const rankedItem = itemRanking[index]
                     return (
@@ -542,46 +553,92 @@ export default function BreakoutRoomSimulator() {
             </Card>
           </CardContent>
           {/* Control Buttons */}
-          <CardFooter className='flex justify-between items-center'>
-            <Button
-              onClick={() => handleNextStep()}
-              disabled={
-                isPlaying ||
-                isLoading ||
-                (!hasStarted && !conversationContext.trim())
-              }
-            >
-              {!hasStarted ? (
-                'Start Simulation'
-              ) : isLoading ? (
-                'Processing...'
-              ) : (
-                <>
-                  <SkipForward className='mr-2 h-4 w-4' /> Next Step
-                </>
-              )}
-            </Button>
-            <div className='text-sm font-medium'>Turn: {currentStep}</div>
-            <Button
-              onClick={handlePlaySimulation}
-              disabled={isPlaying || isLoading || !hasStarted}
-            >
-              <Play className='mr-2 h-4 w-4' /> Play Simulation
-            </Button>
-            <Button
-              onClick={handleEndSimulation}
-              disabled={
-                !hasStarted || isLoading || simulationTurns.length === 0
-              }
-              variant='secondary'
-            >
-              End & Save Simulation
-            </Button>
+          <CardFooter className='flex items-center justify-center gap-6 border-t py-4'>
+            <div className='flex items-center gap-3'>
+              <Button
+                onClick={() => handleNextStep()}
+                disabled={
+                  isLoading ||
+                  isPlaying ||
+                  (!hasStarted && !conversationContext.trim())
+                }
+                className='w-28 h-9'
+                variant={!hasStarted ? 'default' : 'ghost'}
+              >
+                {!hasStarted ? (
+                  <>
+                    <Play className='mr-2 h-4 w-4' />
+                    Start
+                  </>
+                ) : loadingButton === 'next' ? (
+                  <>
+                    <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                    Wait...
+                  </>
+                ) : (
+                  <>
+                    <SkipForward className='mr-2 h-4 w-4' />
+                    Next
+                  </>
+                )}
+              </Button>
+
+              <Button
+                onClick={handlePlaySimulation}
+                disabled={isLoading || !hasStarted}
+                className='w-28 h-9'
+                variant='ghost'
+              >
+                {loadingButton === 'play' ? (
+                  <>
+                    <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                    Wait...
+                  </>
+                ) : (
+                  <>
+                    <Play className='mr-2 h-4 w-4' />
+                    Play
+                  </>
+                )}
+              </Button>
+            </div>
+
+            <div className='flex items-center gap-3'>
+              <div className='px-4 py-1.5 bg-muted rounded-full'>
+                <span className='text-sm font-medium'>
+                  Turn{' '}
+                  <span className='text-primary font-semibold'>
+                    {currentStep}
+                  </span>
+                </span>
+              </div>
+
+              <Button
+                onClick={handleEndSimulation}
+                disabled={
+                  isLoading || !hasStarted || simulationTurns.length === 0
+                }
+                variant='ghost'
+                className='w-28 h-9'
+              >
+                {loadingButton === 'save' ? (
+                  <>
+                    <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                    Wait...
+                  </>
+                ) : (
+                  <>
+                    <Save className='mr-2 h-4 w-4' />
+                    Save
+                  </>
+                )}
+              </Button>
+            </div>
           </CardFooter>
         </Card>
 
         {/* Right Panel - Agent Analysis */}
-        <Card className='w-[30%] flex flex-col shadow-none'>
+        <Card className='w-1/4 flex flex-col shadow-none'>
           <CardHeader className='flex-none'>
             <CardTitle>Agent Analysis</CardTitle>
           </CardHeader>
