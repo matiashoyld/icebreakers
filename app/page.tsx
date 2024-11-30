@@ -129,32 +129,60 @@ export default function BreakoutRoomSimulator() {
 
       // Process any ranking changes requested by the agent
       if (step.rankingChanges && step.rankingChanges.length > 0) {
-        console.log(
-          'Processing ranking changes:',
-          JSON.stringify(step.rankingChanges, null, 2)
-        )
+        setItemRanking((prevRanking) => {
+          // Create a copy of the current ranking with all 15 positions
+          let newRanking = Array(15).fill(null)
 
-        // Create a new array with just the items being ranked
-        const newRanking = step.rankingChanges
-          .map((change) => {
-            // Find the item in salvageItems using case-insensitive comparison
-            // to handle variations in how the LLM might refer to items
-            const item = salvageItems.find(
+          // First, copy over all existing items from prevRanking
+          prevRanking.forEach((item, index) => {
+            if (item) {
+              newRanking[index] = item
+            }
+          })
+
+          // Process each change
+          step.rankingChanges?.forEach((change) => {
+            // Normalize item names for comparison by removing special characters and making lowercase
+            const normalizeItemName = (name: string) =>
+              name
+                .toLowerCase()
+                .replace(/[&]/g, 'and')
+                .replace(/[^a-z0-9\s]/g, '')
+                .replace(/^(a|an|the)\s+/, '')
+                .trim()
+
+            // Find the item in salvageItems using normalized comparison
+            const itemToMove = salvageItems.find(
               (item) =>
-                item.name.toLowerCase() === change.item.toLowerCase() ||
-                item.name.toLowerCase() === `a ${change.item}`.toLowerCase()
+                normalizeItemName(item.name) === normalizeItemName(change.item)
             )
 
-            if (!item) {
+            if (!itemToMove) {
               console.warn(`Item not found: ${change.item}`)
-              return null
+              console.warn('Normalized name:', normalizeItemName(change.item))
+              console.warn(
+                'Available normalized names:',
+                salvageItems.map((i) => normalizeItemName(i.name))
+              )
+              return
             }
-            return item
-          })
-          .filter((item): item is NonNullable<typeof item> => item !== null)
 
-        // Update the ranking state with the new order
-        setItemRanking(newRanking)
+            // Remove the item from its current position if it exists
+            const existingIndex = newRanking.findIndex(
+              (item) => item?.name === itemToMove.name
+            )
+            if (existingIndex !== -1) {
+              newRanking[existingIndex] = null
+            }
+
+            // Place the item in its new position (adjust for 0-based array)
+            const targetIndex = change.newRank - 1
+            newRanking[targetIndex] = itemToMove
+          })
+
+          // Filter out null values while preserving positions
+          return newRanking.map((item) => item || null)
+        })
       }
 
       console.log('itemRanking after setting:', itemRanking)
@@ -338,35 +366,46 @@ export default function BreakoutRoomSimulator() {
                   </TableRow>
                 </TableHeader>
                 <TableBody className='text-xs'>
-                  {itemRanking.map((item, index) => (
-                    <TooltipProvider key={item.id}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <TableRow
-                            className={
-                              index === currentStep - 1 ? 'bg-muted/50' : ''
-                            }
-                          >
-                            <TableCell className='py-1'>{index + 1}</TableCell>
-                            <TableCell className='py-1'>
-                              <motion.div
-                                initial={{
-                                  backgroundColor:
-                                    index === currentStep - 1
-                                      ? 'rgba(59, 130, 246, 0.5)'
-                                      : 'transparent',
-                                }}
-                                animate={{ backgroundColor: 'transparent' }}
-                                transition={{ duration: 1 }}
-                              >
-                                {item.emoji} {item.name}
-                              </motion.div>
-                            </TableCell>
-                          </TableRow>
-                        </TooltipTrigger>
-                      </Tooltip>
-                    </TooltipProvider>
-                  ))}
+                  {Array.from({ length: 15 }, (_, index) => {
+                    const rankedItem = itemRanking[index]
+                    return (
+                      <TooltipProvider key={index}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <TableRow
+                              className={
+                                index === currentStep - 1 ? 'bg-muted/50' : ''
+                              }
+                            >
+                              <TableCell className='py-1'>
+                                {index + 1}
+                              </TableCell>
+                              <TableCell className='py-1'>
+                                {rankedItem ? (
+                                  <motion.div
+                                    initial={{
+                                      backgroundColor:
+                                        index === currentStep - 1
+                                          ? 'rgba(59, 130, 246, 0.5)'
+                                          : 'transparent',
+                                    }}
+                                    animate={{ backgroundColor: 'transparent' }}
+                                    transition={{ duration: 1 }}
+                                  >
+                                    {rankedItem.emoji} {rankedItem.name}
+                                  </motion.div>
+                                ) : (
+                                  <span className='text-muted-foreground italic'>
+                                    Not ranked yet
+                                  </span>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          </TooltipTrigger>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )
+                  })}
                 </TableBody>
               </Table>
             </ScrollArea>

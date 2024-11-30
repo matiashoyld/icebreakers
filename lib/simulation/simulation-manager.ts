@@ -29,7 +29,9 @@ export async function getNextSimulationStep(
     input.currentRanking.length === 0
       ? 'No items have been ranked yet.'
       : input.currentRanking
-          .map((item, index) => `${index + 1}. ${item.name}`)
+          .map((item, index) =>
+            item ? `${index + 1}. ${item.name}` : `${index + 1}. Not ranked yet`
+          )
           .join('\n')
 
   const promptInputs = [
