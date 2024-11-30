@@ -33,6 +33,7 @@ import { motion } from 'framer-motion'
 // Icons
 import {
   Activity,
+  ArrowUpDown,
   BarChart,
   Brain,
   CameraOff,
@@ -43,6 +44,7 @@ import {
 
 // Custom Components
 import { EngagementChart } from '@/components/EngagementChart'
+import { ProposedChanges } from '@/components/ProposedChanges'
 
 // Data, Types, and Constants
 import {
@@ -52,6 +54,12 @@ import {
 import { initialParticipants, salvageItems } from '@/app/data/data'
 import { EngagementData, Message, Participant } from '@/app/types/types'
 import { getNextSimulationStep } from '@/lib/simulation/simulation-manager'
+
+type Change = {
+  item: { name: string; emoji: string }
+  fromRank: number
+  toRank: number
+}
 
 export default function BreakoutRoomSimulator() {
   // State variables
@@ -84,7 +92,10 @@ export default function BreakoutRoomSimulator() {
   >([])
 
   // State to track the current ranking of survival items
-  const [itemRanking, setItemRanking] = useState<typeof salvageItems>([])
+  const [itemRanking, setItemRanking] = useState<
+    ((typeof salvageItems)[0] | undefined)[]
+  >([])
+  const [proposedChanges, setProposedChanges] = useState<Change[]>([])
 
   // Function to get the latest engagement score for a participant
   const getLatestEngagement = (participantId: number) => {
@@ -117,7 +128,9 @@ export default function BreakoutRoomSimulator() {
           currentTurn: currentStep,
           dialogueHistory,
           conversationContext,
-          currentRanking: itemRanking,
+          currentRanking: itemRanking.filter(
+            (item): item is (typeof salvageItems)[0] => item !== undefined
+          ),
         },
         currentParticipantId
       )
@@ -129,60 +142,62 @@ export default function BreakoutRoomSimulator() {
 
       // Process any ranking changes requested by the agent
       if (step.rankingChanges && step.rankingChanges.length > 0) {
-        setItemRanking((prevRanking) => {
-          // Create a copy of the current ranking with all 15 positions
-          let newRanking = Array(15).fill(null)
+        console.log('Raw ranking changes:', step.rankingChanges)
+        console.log('Current itemRanking:', itemRanking)
 
-          // First, copy over all existing items from prevRanking
-          prevRanking.forEach((item, index) => {
-            if (item) {
-              newRanking[index] = item
-            }
-          })
+        const changes: Change[] = step.rankingChanges.map((change) => {
+          const salvageItem = salvageItems.find((item) =>
+            item.name.toLowerCase().includes(change.item.toLowerCase())
+          )
 
-          // Process each change
-          step.rankingChanges?.forEach((change) => {
-            // Normalize item names for comparison by removing special characters and making lowercase
-            const normalizeItemName = (name: string) =>
-              name
-                .toLowerCase()
-                .replace(/[&]/g, 'and')
-                .replace(/[^a-z0-9\s]/g, '')
-                .replace(/^(a|an|the)\s+/, '')
-                .trim()
+          const existingItem = itemRanking.find(
+            (item) => item?.name === salvageItem?.name
+          )
+          const currentRanking = existingItem
+            ? itemRanking.findIndex(
+                (item) => item?.name === salvageItem?.name
+              ) + 1
+            : 0
 
-            // Find the item in salvageItems using normalized comparison
-            const itemToMove = salvageItems.find(
-              (item) =>
-                normalizeItemName(item.name) === normalizeItemName(change.item)
-            )
-
-            if (!itemToMove) {
-              console.warn(`Item not found: ${change.item}`)
-              console.warn('Normalized name:', normalizeItemName(change.item))
-              console.warn(
-                'Available normalized names:',
-                salvageItems.map((i) => normalizeItemName(i.name))
-              )
-              return
-            }
-
-            // Remove the item from its current position if it exists
-            const existingIndex = newRanking.findIndex(
-              (item) => item?.name === itemToMove.name
-            )
-            if (existingIndex !== -1) {
-              newRanking[existingIndex] = null
-            }
-
-            // Place the item in its new position (adjust for 0-based array)
-            const targetIndex = change.newRank - 1
-            newRanking[targetIndex] = itemToMove
-          })
-
-          // Filter out null values while preserving positions
-          return newRanking.map((item) => item || null)
+          return {
+            item: {
+              name: salvageItem?.name || change.item,
+              emoji: salvageItem?.emoji || '',
+            },
+            fromRank: currentRanking,
+            toRank: change.newRank,
+          }
         })
+
+        const newRanking = [...itemRanking]
+        changes.forEach((change) => {
+          const item = {
+            name: change.item.name,
+            emoji: change.item.emoji,
+          }
+
+          // Remove the item from its old position if it exists
+          const oldIndex = newRanking.findIndex(
+            (rankItem) => rankItem?.name === item.name
+          )
+          if (oldIndex !== -1) {
+            newRanking[oldIndex] = undefined
+          }
+
+          // Place the item in its new position
+          const targetIndex = change.toRank - 1
+          newRanking[targetIndex] = {
+            id: salvageItems.find((i) => i.name === change.item.name)?.id || 0,
+            name: change.item.name,
+            emoji: change.item.emoji,
+            initialRank: change.toRank,
+          }
+        })
+        setItemRanking(newRanking)
+
+        setProposedChanges(changes)
+      } else {
+        setProposedChanges([])
       }
 
       console.log('itemRanking after setting:', itemRanking)
@@ -387,9 +402,11 @@ export default function BreakoutRoomSimulator() {
                                       backgroundColor:
                                         index === currentStep - 1
                                           ? 'rgba(59, 130, 246, 0.5)'
-                                          : 'transparent',
+                                          : 'rgba(0, 0, 0, 0)',
                                     }}
-                                    animate={{ backgroundColor: 'transparent' }}
+                                    animate={{
+                                      backgroundColor: 'rgba(0, 0, 0, 0)',
+                                    }}
                                     transition={{ duration: 1 }}
                                   >
                                     {rankedItem.emoji} {rankedItem.name}
@@ -630,6 +647,19 @@ export default function BreakoutRoomSimulator() {
                       <p className='text-sm bg-muted p-2 rounded'>
                         {currentDecision}
                       </p>
+                    </div>
+                    <div className='space-y-1'>
+                      <h4 className='text-sm font-medium flex items-center'>
+                        <ArrowUpDown className='w-4 h-4 mr-2' /> Proposed
+                        Changes
+                      </h4>
+                      {proposedChanges.length > 0 ? (
+                        <ProposedChanges changes={proposedChanges} />
+                      ) : (
+                        <p className='text-xs bg-muted p-2 rounded'>
+                          No changes proposed at this time.
+                        </p>
+                      )}
                     </div>
                   </div>
                   <Separator />
