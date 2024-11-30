@@ -1,0 +1,53 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url = env("POSTGRES_PRISMA_URL")
+  directUrl = env("POSTGRES_URL_NON_POOLING")
+}
+
+model Simulation {
+  id              String    @id @default(cuid())
+  createdAt       DateTime  @default(now())
+  context         String    // The initial conversation context
+  totalTurns      Int
+  taskScore       Float?    // Optional score for the task completion
+  participants    SimulationParticipant[]
+  turns           SimulationTurn[]
+}
+
+model SimulationParticipant {
+  id                  String      @id @default(cuid())
+  simulationId        String
+  simulation          Simulation  @relation(fields: [simulationId], references: [id])
+  participantId       Int
+  name                String
+  wordsSpoken         Int
+  cameraToggles       Int
+  timesDoingNothing   Int
+  participationRate   Float
+  satisfactionScore   Float?
+  turns               SimulationTurn[]
+
+  @@index([simulationId])
+}
+
+model SimulationTurn {
+  id                      String                @id @default(cuid())
+  simulationId            String
+  simulation              Simulation            @relation(fields: [simulationId], references: [id])
+  participantId           String
+  participant             SimulationParticipant @relation(fields: [participantId], references: [id])
+  turnNumber             Int
+  action                 String                // 'speak', 'toggleCamera', or 'doNothing'
+  message                String?               // Message content if action was 'speak'
+  thinkingProcess        String                // The thinking process
+  decision               String
+  engagementScore        Float
+  cameraStatus           Boolean               // Camera status at this turn
+
+  @@index([simulationId])
+  @@index([participantId])
+} 
