@@ -6,7 +6,7 @@ export type SimulationTurn = {
   participantId: number
   action: string
   message?: string
-  thinkingProcess: string
+  thinking: string
   decision: string
   engagementScore: number
   cameraStatus: boolean
@@ -60,7 +60,7 @@ export async function saveSimulation({
             turnNumber: turn.turnNumber,
             action: turn.action,
             message: turn.message,
-            thinkingProcess: turn.thinkingProcess,
+            thinkingProcess: turn.thinking,
             decision: turn.action,
             engagementScore: turn.engagementScore,
             cameraStatus: turn.cameraStatus,
@@ -84,9 +84,14 @@ export async function saveSimulation({
 }
 
 export async function getSimulations() {
-  return await prisma.simulation.findMany({
+  const simulations = await prisma.simulation.findMany({
     include: {
-      participants: true,
+      participants: {
+        select: {
+          participationRate: true,
+          satisfactionScore: true,
+        },
+      },
       _count: {
         select: { turns: true },
       },
@@ -94,6 +99,36 @@ export async function getSimulations() {
     orderBy: {
       createdAt: 'desc',
     },
+  })
+
+  return simulations.map((simulation) => {
+    // Calculate average participation
+    const avgParticipation =
+      simulation.participants.reduce(
+        (sum, p) => sum + p.participationRate * 100,
+        0
+      ) / simulation.participants.length
+
+    // Calculate average satisfaction
+    const satisfactionScores = simulation.participants
+      .map((p) => p.satisfactionScore)
+      .filter((score): score is number => score !== null)
+
+    const avgSatisfaction =
+      satisfactionScores.length > 0
+        ? satisfactionScores.reduce((sum, score) => sum + score, 0) /
+          satisfactionScores.length
+        : null
+
+    return {
+      id: simulation.id,
+      createdAt: simulation.createdAt.toISOString(),
+      context: simulation.context,
+      totalTurns: simulation._count.turns,
+      taskScore: simulation.taskScore,
+      avgParticipation,
+      avgSatisfaction,
+    }
   })
 }
 
@@ -108,5 +143,24 @@ export async function getSimulationById(id: string) {
         },
       },
     },
+  })
+}
+
+export async function deleteSimulation(id: string) {
+  return await prisma.$transaction(async (tx) => {
+    // Delete all turns first
+    await tx.simulationTurn.deleteMany({
+      where: { simulationId: id },
+    })
+
+    // Delete all participants
+    await tx.simulationParticipant.deleteMany({
+      where: { simulationId: id },
+    })
+
+    // Finally delete the simulation
+    return await tx.simulation.delete({
+      where: { id },
+    })
   })
 }
