@@ -299,12 +299,6 @@ export default function BreakoutRoomSimulator() {
     }
   }
 
-  // Handler to play the simulation automatically
-  const handlePlaySimulation = () => {
-    setLoadingButton('play')
-    setIsPlaying(true)
-  }
-
   // Modify the play simulation useEffect to handle async
   useEffect(() => {
     let timer: NodeJS.Timeout
