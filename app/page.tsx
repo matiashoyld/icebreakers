@@ -281,6 +281,24 @@ export default function BreakoutRoomSimulator() {
     itemRanking,
   ])
 
+  // Modify handlePlaySimulation to toggle play/pause
+  const handlePlayPauseSimulation = () => {
+    if (isPlaying) {
+      // If currently playing, pause it
+      setIsPlaying(false)
+      setLoadingButton(null)
+    } else {
+      // If currently paused, start playing
+      setLoadingButton('play')
+      setIsPlaying(true)
+
+      // If simulation hasn't started, trigger the first step
+      if (!hasStarted) {
+        handleNextStep()
+      }
+    }
+  }
+
   // Handler to play the simulation automatically
   const handlePlaySimulation = () => {
     setLoadingButton('play')
@@ -424,7 +442,7 @@ export default function BreakoutRoomSimulator() {
           <CardFooter>
             <SimulationControls
               onNextStep={handleNextStep}
-              onPlaySimulation={handlePlaySimulation}
+              onPlayPauseSimulation={handlePlayPauseSimulation}
               onEndSimulation={handleEndSimulation}
               isLoading={isLoading}
               isPlaying={isPlaying}

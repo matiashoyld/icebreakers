@@ -1,11 +1,11 @@
 import { Scenario } from '@/components/ScenarioSelector'
 import { Button } from '@/components/ui/button'
 import { SimulationTurn } from '@/lib/services/simulation-service'
-import { Loader2, Play, Save, SkipForward } from 'lucide-react'
+import { Loader2, Pause, Play, Save, SkipForward } from 'lucide-react'
 
 interface SimulationControlsProps {
   onNextStep: () => void
-  onPlaySimulation: () => void
+  onPlayPauseSimulation: () => void
   onEndSimulation: () => void
   isLoading: boolean
   isPlaying: boolean
@@ -18,7 +18,7 @@ interface SimulationControlsProps {
 
 export function SimulationControls({
   onNextStep,
-  onPlaySimulation,
+  onPlayPauseSimulation,
   onEndSimulation,
   isLoading,
   isPlaying,
@@ -42,11 +42,6 @@ export function SimulationControls({
               <Play className='mr-2 h-4 w-4' />
               Start
             </>
-          ) : loadingButton === 'next' ? (
-            <>
-              <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-              Wait...
-            </>
           ) : (
             <>
               <SkipForward className='mr-2 h-4 w-4' />
@@ -56,8 +51,10 @@ export function SimulationControls({
         </Button>
 
         <Button
-          onClick={onPlaySimulation}
-          disabled={isLoading || !hasStarted}
+          onClick={onPlayPauseSimulation}
+          disabled={
+            !selectedScenario || (!isPlaying && loadingButton === 'next')
+          }
           className='w-28 h-9'
           variant='ghost'
         >
@@ -65,6 +62,11 @@ export function SimulationControls({
             <>
               <Loader2 className='mr-2 h-4 w-4 animate-spin' />
               Wait...
+            </>
+          ) : isPlaying ? (
+            <>
+              <Pause className='mr-2 h-4 w-4' />
+              Pause
             </>
           ) : (
             <>
@@ -83,7 +85,9 @@ export function SimulationControls({
 
       <Button
         onClick={onEndSimulation}
-        disabled={isLoading || !hasStarted || simulationTurns.length === 0}
+        disabled={
+          isLoading || !hasStarted || simulationTurns.length === 0 || isPlaying
+        }
         variant='ghost'
         className='w-28 h-9'
       >
