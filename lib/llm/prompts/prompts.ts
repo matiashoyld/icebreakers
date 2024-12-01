@@ -1,3 +1,5 @@
+import { MAX_SIMULATION_TURNS } from '@/app/constants/constants'
+
 export function baselinePrompt(additionalInstructions: string): string {
   return `
         [Input]
@@ -5,6 +7,7 @@ export function baselinePrompt(additionalInstructions: string): string {
         !<INPUT 1>!: Context of the conversation (participants, camera status)
         !<INPUT 2>!: Dialogue history
         !<INPUT 3>!: Current ranking of survival items (ordered list)
+        !<INPUT 4>!: Current turn number
 
         [Output]
         Output format -- output your response in json with the following fields:
@@ -33,6 +36,8 @@ export function baselinePrompt(additionalInstructions: string): string {
         4. The given conversation topic and objectives
         5. Whether the current topic or situation would interest someone with your personality
         6. Whether you feel compelled to speak, turn your camera on/off, or simply observe
+
+        
         ### End Context ###
 
         ### Begin Scenario ###
@@ -66,7 +71,8 @@ export function baselinePrompt(additionalInstructions: string): string {
         TASK:
         1. Share your initial thoughts on item rankings
         2. Discuss with your group to reach consensus
-        3. Produce a final group ranking
+        3. Produce a final group ranking. This should list all 15 items. Not listing items is penalized.
+        4. This is a timed activity. You should move quickly to produce a full list of rankings. You have a maximum of ${MAX_SIMULATION_TURNS} turns to complete the task. Taking less turns is better.
 
         RULES:
         - Wait for your turn to speak
@@ -86,6 +92,8 @@ export function baselinePrompt(additionalInstructions: string): string {
 
         ### Begin Conversation Context ###
         !<INPUT 1>!
+
+        Current Turn: !<INPUT 4>! of ${MAX_SIMULATION_TURNS} total turns
         ### End Conversation Context ###
 
         ### Begin Dialogue History ###

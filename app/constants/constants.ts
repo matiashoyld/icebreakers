@@ -13,3 +13,8 @@ export const getEngagementScore = () => {
   if (typeof window === 'undefined') return 0
   return Math.floor(Math.random() * 100)
 }
+
+/**
+ * Maximum number of turns allowed in a simulation
+ */
+export const MAX_SIMULATION_TURNS = 30

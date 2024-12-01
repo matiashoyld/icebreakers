@@ -67,6 +67,7 @@ export async function getNextSimulationStep(
     JSON.stringify(input.participants),
     input.dialogueHistory.join('\n'),
     currentRankingText,
+    input.currentTurn.toString(),
   ]
 
   const response = await fetch('/api/simulation', {

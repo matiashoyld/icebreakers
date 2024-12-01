@@ -1,3 +1,4 @@
+import { MAX_SIMULATION_TURNS } from '@/app/constants/constants'
 import { Scenario } from '@/components/ScenarioSelector'
 import { Button } from '@/components/ui/button'
 import { SimulationTurn } from '@/lib/services/simulation-service'
@@ -78,8 +79,11 @@ export function SimulationControls({
       </div>
 
       <div className='px-4 py-1.5 bg-muted rounded-full'>
-        <span className='text-sm font-medium'>
-          Turn <span className='text-primary font-semibold'>{currentStep}</span>
+        <span className='text-sm font-medium whitespace-nowrap'>
+          Turn{' '}
+          <span className='text-primary font-semibold'>
+            {currentStep}/{MAX_SIMULATION_TURNS}
+          </span>
         </span>
       </div>
 
