@@ -2,6 +2,11 @@
 
 The Icebreakers simulation implements a sophisticated turn-taking system that mimics natural conversation dynamics in video calls. This document outlines the key components and mechanisms of this system.
 
+## Additional Features to be Implemented:
+
+- **Improved Mention Logic**: Currently, mentions work but still don't have the natural flow of conversation. We need to improve the mention logic to create more natural conversation flows.
+- **Participation Pressure:** We can add a "pressure to participate" factor that increases an agent's engagement score if they haven't spoken yet, especially in contexts like introductions. Let me check the current turn prompt first:
+
 ## Core Components
 
 ### 1. Engagement Scoring
@@ -12,6 +17,8 @@ The system uses an AI-powered engagement scoring mechanism that evaluates each p
 - **Participation Rate**: Historical engagement level
 - **Recent Activity**: Whether they were the last speaker
 - **Context Awareness**: Understanding of the current conversation topic
+
+See lib/llm/prompts/engagement-prompt.ts for details. This template is used to generate engagement scores for each participant. Thus, 4 LM calls are made before each turn.
 
 ### 2. Direct Mentions
 The system implements an "@mention" feature that allows participants to directly address each other:
@@ -88,23 +95,3 @@ The system encourages natural conversation through:
    - Camera toggling for non-verbal engagement
    - Varying participation rates
    - Natural turn-taking through @mentions
-
-## Usage in Simulation
-
-The turn-taking system is integrated into the simulation through:
-
-1. **Simulation Steps**:
-   - Each step evaluates the current state
-   - Determines next speaker based on mentions/engagement
-   - Updates participant metrics
-
-2. **State Tracking**:
-   - Maintains dialogue history
-   - Tracks participant engagement metrics
-   - Updates camera states and participation rates
-
-3. **UI Integration**:
-   - Displays current speaker
-   - Shows engagement levels
-   - Indicates camera states
-   - Supports manual step control
