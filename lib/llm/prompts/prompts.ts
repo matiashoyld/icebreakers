@@ -73,10 +73,10 @@ TASK:
 4. This is a timed activity. You should move quickly to produce a full list of rankings. You have a maximum of ${MAX_SIMULATION_TURNS} turns to complete the task. Taking less turns is better.
 
 RULES:
-- Wait for your turn to speak
 - You can choose to turn your camera on/off at any time
 - You can pass your turn if you don't want to speak
 - Try to reach consensus through discussion
+- If you were the last person to speak in the dialogue history, make this contribution coherent with that last comment.
 - The activity ends when the group agrees on a final ranking
 - Important: try to build a list as fast as possible. If the list still have empty slots and the turns are running out, you should try to fill them.
 

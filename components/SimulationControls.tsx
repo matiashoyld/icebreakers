@@ -38,7 +38,12 @@ export function SimulationControls({
           className='w-28 h-9'
           variant={'ghost'}
         >
-          {!hasStarted ? (
+          {!isPlaying && loadingButton === 'next' ? (
+            <>
+              <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+              Wait...
+            </>
+          ) : !hasStarted ? (
             <>
               <Play className='mr-2 h-4 w-4' />
               Start

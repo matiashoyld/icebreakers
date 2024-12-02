@@ -82,6 +82,9 @@ export default function BreakoutRoomSimulator() {
     null
   )
 
+  // Add this state to track if a step is in progress
+  const [isStepInProgress, setIsStepInProgress] = useState(false)
+
   const { toast } = useToast()
 
   // Function to get the latest engagement score for a participant
@@ -94,8 +97,12 @@ export default function BreakoutRoomSimulator() {
 
   // Modify handleNextStep to handle ranking changes
   const handleNextStep = useCallback(async () => {
-    if (isLoading) return
+    if (isLoading || isStepInProgress) return
+
+    setIsLoading(true)
     setLoadingButton('next')
+    setIsStepInProgress(true)
+
     try {
       // Start the simulation if it hasn't started
       if (!hasStarted) {
@@ -265,6 +272,7 @@ export default function BreakoutRoomSimulator() {
       )
       setIsPlaying(false)
     } finally {
+      setIsStepInProgress(false)
       setLoadingButton(null)
       setIsLoading(false)
     }
@@ -277,36 +285,52 @@ export default function BreakoutRoomSimulator() {
     selectedScenario,
     hasStarted,
     itemRanking,
+    isStepInProgress,
   ])
 
-  // Modify handlePlaySimulation to toggle play/pause
-  const handlePlayPauseSimulation = () => {
+  // Modify handlePlayPauseSimulation function
+  const handlePlayPauseSimulation = useCallback(() => {
+    if (isStepInProgress) return
+
     if (isPlaying) {
       // If currently playing, pause it
       setIsPlaying(false)
       setLoadingButton(null)
     } else {
       // If currently paused, start playing
-      setLoadingButton('play')
       setIsPlaying(true)
+      setLoadingButton('play')
 
       // If simulation hasn't started, trigger the first step
       if (!hasStarted) {
         handleNextStep()
       }
     }
-  }
+  }, [isPlaying, hasStarted, handleNextStep, isStepInProgress])
 
-  // Modify the play simulation useEffect to handle async
+  // Modify the play simulation useEffect
   useEffect(() => {
-    let timer: NodeJS.Timeout
-    if (isPlaying && !isLoading) {
-      timer = setTimeout(() => {
-        handleNextStep()
-      }, 2000)
+    let timeoutId: NodeJS.Timeout | null = null
+
+    const scheduleNextStep = () => {
+      if (isPlaying && !isStepInProgress) {
+        timeoutId = setTimeout(() => {
+          handleNextStep()
+        }, 2000)
+      }
     }
-    return () => clearTimeout(timer)
-  }, [isPlaying, handleNextStep, isLoading])
+
+    if (isPlaying && hasStarted && !isStepInProgress) {
+      scheduleNextStep()
+    }
+
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+        timeoutId = null
+      }
+    }
+  }, [isPlaying, hasStarted, handleNextStep, isStepInProgress])
 
   // Effect to auto-scroll the messages area
   useEffect(() => {
