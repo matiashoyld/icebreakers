@@ -2,6 +2,8 @@
 
 import { useToast } from '@/hooks/use-toast'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { SimulationDashboard } from '@/components/SimulationDashboard'
+import { useSimulationMetrics } from '@/hooks/useSimulationMetrics'
 
 // UI Components
 import {
@@ -83,6 +85,9 @@ export default function BreakoutRoomSimulator() {
   )
 
   const { toast } = useToast()
+
+  // Use the custom hook to get metrics
+  const { stepMetrics, overallMetrics } = useSimulationMetrics(simulationTurns)
 
   // Function to get the latest engagement score for a participant
   const getLatestEngagement = (participantId: number) => {
@@ -467,6 +472,7 @@ export default function BreakoutRoomSimulator() {
         </Card>
       </div>
       <Toaster />
+      <SimulationDashboard stepMetrics={stepMetrics} overallMetrics={overallMetrics} />
     </div>
   )
 }
