@@ -1,13 +1,12 @@
 import { salvageItems } from '@/app/data/data'
 import { Participant, SimulationStep } from '@/app/types/types'
+import { selectNextParticipant } from '@/lib/llm/interestScore'
 import {
   baselinePrompt,
   gamificationPrompt,
   leadershipPrompt,
   socialPrompt,
 } from '@/lib/llm/prompts/prompts'
-import { selectNextParticipant } from '@/lib/llm/interestScore'
-import OpenAI from 'openai'
 
 export type SimulationContext = {
   participants: Participant[]
@@ -42,9 +41,9 @@ export async function getNextSimulationStep(
         action: 'speak',
         message: msg,
         thinking: '',
-        prompt: ''
+        prompt: '',
       })),
-      currentRanking: input.currentRanking.map(item => item.name),
+      currentRanking: input.currentRanking.map((item) => item.name),
       currentTurn: input.currentTurn,
     }),
   })
@@ -57,10 +56,8 @@ export async function getNextSimulationStep(
 
   // Select the next participant based on interest scores
   const nextParticipantId = selectNextParticipant(scores)
-  
-  const participant = input.participants.find(
-    (p) => p.id === nextParticipantId
-  )
+
+  const participant = input.participants.find((p) => p.id === nextParticipantId)
   if (!participant) throw new Error('Participant not found')
 
   let prompt: string
@@ -92,10 +89,21 @@ export async function getNextSimulationStep(
           )
           .join('\n')
 
+  const modifiedDialogueHistory =
+    input.dialogueHistory.length === 0
+      ? 'This is the start of the conversation, you are the first agent to speak.'
+      : input.dialogueHistory
+          .map((line) => {
+            // Match the participant name only at the start of the line after the number
+            const pattern = new RegExp(`^(\\d+\\. )(${participant.name}:)`, 'g')
+            return line.replace(pattern, `$1${participant.name} (You):`)
+          })
+          .join('\n')
+
   const promptInputs = [
     JSON.stringify(participant),
     JSON.stringify(input.participants),
-    input.dialogueHistory.join('\n'),
+    modifiedDialogueHistory,
     currentRankingText,
     input.currentTurn.toString(),
   ]

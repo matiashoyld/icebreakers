@@ -207,9 +207,9 @@ export default function BreakoutRoomSimulator() {
         setMessages((prev) => [...prev, newMessage])
         setDialogueHistory((prev) => [
           ...prev,
-          `${participants.find((p) => p.id === nextParticipantId)?.name}: ${
-            step.message
-          }`,
+          `${prev.length + 1}. ${
+            participants.find((p) => p.id === nextParticipantId)?.name
+          }: ${step.message}`,
         ])
       }
 
