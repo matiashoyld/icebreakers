@@ -25,6 +25,34 @@ interface SimulationInput {
   }
 }
 
+function formatParticipantInfo(participant: Participant): string {
+  return `This is your description:
+Name: ${participant.name}
+Camera status: ${participant.cameraOn ? 'ON' : 'OFF'}
+Times you have toggled your camera: ${participant.cameraToggles}
+Speaking style: ${participant.speakingStyle}
+Agent description: ${participant.agentDescription}`
+}
+
+function formatOtherParticipants(
+  allParticipants: Participant[],
+  currentParticipant: Participant
+): string {
+  const otherParticipants = allParticipants.filter(
+    (p) => p.id !== currentParticipant.id
+  )
+
+  return `This is the current state of the other agents in the conversation:
+
+${otherParticipants
+  .map(
+    (p) => `${p.name}:
+- Camera Status: ${p.cameraOn ? 'ON' : 'OFF'}
+- Times this agent has toggled the camera: ${p.cameraToggles}`
+  )
+  .join('\n\n')}`
+}
+
 export async function getNextSimulationStep(
   input: SimulationInput
 ): Promise<{ step: SimulationStep; nextParticipantId: number }> {
@@ -83,10 +111,12 @@ export async function getNextSimulationStep(
   const currentRankingText =
     input.currentRanking.length === 0
       ? 'No items have been ranked yet.'
-      : input.currentRanking
-          .map((item, index) =>
-            item ? `${index + 1}. ${item.name}` : `${index + 1}. Not ranked yet`
-          )
+      : Array(15)
+          .fill(null)
+          .map((_, index) => {
+            const item = input.currentRanking[index]
+            return `${index + 1}. ${item ? item.name : ''}`
+          })
           .join('\n')
 
   const modifiedDialogueHistory =
@@ -101,8 +131,8 @@ export async function getNextSimulationStep(
           .join('\n')
 
   const promptInputs = [
-    JSON.stringify(participant),
-    JSON.stringify(input.participants),
+    formatParticipantInfo(participant),
+    formatOtherParticipants(input.participants, participant),
     modifiedDialogueHistory,
     currentRankingText,
     input.currentTurn.toString(),
