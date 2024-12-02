@@ -110,9 +110,13 @@ export default function BreakoutRoomSimulator() {
         participants,
         currentTurn: currentStep,
         dialogueHistory,
-        currentRanking: itemRanking.filter(
-          (item): item is (typeof salvageItems)[0] => item !== undefined
-        ),
+        currentRanking: itemRanking
+          .map((item) =>
+            item
+              ? { ...item, initialRank: itemRanking.indexOf(item) + 1 }
+              : null
+          )
+          .filter((item): item is (typeof salvageItems)[0] => item !== null),
         scenario: selectedScenario!,
       })
 
@@ -207,9 +211,9 @@ export default function BreakoutRoomSimulator() {
         setMessages((prev) => [...prev, newMessage])
         setDialogueHistory((prev) => [
           ...prev,
-          `${participants.find((p) => p.id === nextParticipantId)?.name}: ${
-            step.message
-          }`,
+          `${prev.length + 1}. ${
+            participants.find((p) => p.id === nextParticipantId)?.name
+          }: ${step.message}`,
         ])
       }
 

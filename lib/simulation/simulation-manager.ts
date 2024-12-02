@@ -1,13 +1,12 @@
 import { salvageItems } from '@/app/data/data'
 import { Participant, SimulationStep } from '@/app/types/types'
+import { selectNextParticipant } from '@/lib/llm/interestScore'
 import {
   baselinePrompt,
   gamificationPrompt,
   leadershipPrompt,
   socialPrompt,
 } from '@/lib/llm/prompts/prompts'
-import { selectNextParticipant } from '@/lib/llm/interestScore'
-import OpenAI from 'openai'
 
 export type SimulationContext = {
   participants: Participant[]
@@ -26,6 +25,34 @@ interface SimulationInput {
   }
 }
 
+function formatParticipantInfo(participant: Participant): string {
+  return `This is your description:
+Name: ${participant.name}
+Camera status: ${participant.cameraOn ? 'ON' : 'OFF'}
+Times you have toggled your camera: ${participant.cameraToggles}
+Speaking style: ${participant.speakingStyle}
+Agent description: ${participant.agentDescription}`
+}
+
+function formatOtherParticipants(
+  allParticipants: Participant[],
+  currentParticipant: Participant
+): string {
+  const otherParticipants = allParticipants.filter(
+    (p) => p.id !== currentParticipant.id
+  )
+
+  return `This is the current state of the other agents in the conversation:
+
+${otherParticipants
+  .map(
+    (p) => `${p.name}:
+- Camera Status: ${p.cameraOn ? 'ON' : 'OFF'}
+- Times this agent has toggled the camera: ${p.cameraToggles}`
+  )
+  .join('\n\n')}`
+}
+
 export async function getNextSimulationStep(
   input: SimulationInput
 ): Promise<{ step: SimulationStep; nextParticipantId: number }> {
@@ -42,9 +69,9 @@ export async function getNextSimulationStep(
         action: 'speak',
         message: msg,
         thinking: '',
-        prompt: ''
+        prompt: '',
       })),
-      currentRanking: input.currentRanking.map(item => item.name),
+      currentRanking: input.currentRanking.map((item) => item.name),
       currentTurn: input.currentTurn,
     }),
   })
@@ -57,10 +84,8 @@ export async function getNextSimulationStep(
 
   // Select the next participant based on interest scores
   const nextParticipantId = selectNextParticipant(scores)
-  
-  const participant = input.participants.find(
-    (p) => p.id === nextParticipantId
-  )
+
+  const participant = input.participants.find((p) => p.id === nextParticipantId)
   if (!participant) throw new Error('Participant not found')
 
   let prompt: string
@@ -83,19 +108,49 @@ export async function getNextSimulationStep(
       prompt = baselinePrompt('')
   }
 
-  const currentRankingText =
-    input.currentRanking.length === 0
-      ? 'No items have been ranked yet.'
-      : input.currentRanking
-          .map((item, index) =>
-            item ? `${index + 1}. ${item.name}` : `${index + 1}. Not ranked yet`
-          )
+  const currentRankingText = (() => {
+    if (input.currentRanking.length === 0) {
+      return 'No items have been ranked yet.'
+    }
+
+    // Get the ranked items text
+    const rankedItemsText = Array(15)
+      .fill(null)
+      .map((_, index) => {
+        const item = input.currentRanking.find(
+          (rankItem) => rankItem.initialRank === index + 1
+        )
+        return `${index + 1}. ${item ? item.name : '-'}`
+      })
+      .join('\n')
+
+    // Get the unranked items
+    const rankedItemNames = input.currentRanking.map((item) => item.name)
+    const unrankedItems = salvageItems
+      .filter((item) => !rankedItemNames.includes(item.name))
+      .map((item) => `- ${item.name}`)
+      .join('\n')
+
+    return `${rankedItemsText}
+
+${unrankedItems.length > 0 ? `Still not ranked:\n${unrankedItems}` : ''}`
+  })()
+
+  const modifiedDialogueHistory =
+    input.dialogueHistory.length === 0
+      ? 'This is the start of the conversation, you are the first agent to speak.'
+      : input.dialogueHistory
+          .map((line) => {
+            // Match the participant name only at the start of the line after the number
+            const pattern = new RegExp(`^(\\d+\\. )(${participant.name}:)`, 'g')
+            return line.replace(pattern, `$1${participant.name} (You):`)
+          })
           .join('\n')
 
   const promptInputs = [
-    JSON.stringify(participant),
-    JSON.stringify(input.participants),
-    input.dialogueHistory.join('\n'),
+    formatParticipantInfo(participant),
+    formatOtherParticipants(input.participants, participant),
+    modifiedDialogueHistory,
     currentRankingText,
     input.currentTurn.toString(),
   ]

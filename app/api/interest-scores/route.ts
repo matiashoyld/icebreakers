@@ -1,7 +1,6 @@
+import { calculateInterestScores } from '@/lib/llm/interestScore'
 import { NextResponse } from 'next/server'
 import OpenAI from 'openai'
-import { calculateInterestScores } from '@/lib/llm/interestScore'
-import { Participant, SimulationStep } from '@/app/types/types'
 
 // Move client initialization inside the handler
 async function getOpenAIClient() {
@@ -20,10 +19,11 @@ export async function POST(request: Request) {
   try {
     console.log('\n=== Interest Scores API Call ===')
     console.log('Time:', new Date().toISOString())
-    
+
     const openai = await getOpenAIClient()
     const body = await request.json()
-    const { participants, conversationHistory, currentRanking, currentTurn } = body
+    const { participants, conversationHistory, currentRanking, currentTurn } =
+      body
 
     console.log('\nInput Data:')
     console.log('- Participants:', participants.length)
@@ -40,8 +40,10 @@ export async function POST(request: Request) {
     )
 
     console.log('\nCalculated Scores:')
-    scores.forEach(score => {
-      console.log(`Participant ${score.participantId}: ${score.score} (${score.reasoning})`)
+    scores.forEach((score) => {
+      console.log(
+        `Participant ${score.participantId}: ${score.score} (${score.reasoning})`
+      )
     })
     console.log('=== End Interest Scores API Call ===\n')
 
