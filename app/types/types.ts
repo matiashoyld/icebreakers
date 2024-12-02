@@ -10,6 +10,8 @@ export type Participant = {
   timesDoingNothing: number
   cameraToggles: number
   participationRate: number
+  speakingStyle: string
+  agentDescription: string
 }
 
 /**
