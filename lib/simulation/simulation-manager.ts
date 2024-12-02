@@ -108,16 +108,33 @@ export async function getNextSimulationStep(
       prompt = baselinePrompt('')
   }
 
-  const currentRankingText =
-    input.currentRanking.length === 0
-      ? 'No items have been ranked yet.'
-      : Array(15)
-          .fill(null)
-          .map((_, index) => {
-            const item = input.currentRanking[index]
-            return `${index + 1}. ${item ? item.name : ''}`
-          })
-          .join('\n')
+  const currentRankingText = (() => {
+    if (input.currentRanking.length === 0) {
+      return 'No items have been ranked yet.'
+    }
+
+    // Get the ranked items text
+    const rankedItemsText = Array(15)
+      .fill(null)
+      .map((_, index) => {
+        const item = input.currentRanking.find(
+          (rankItem) => rankItem.initialRank === index + 1
+        )
+        return `${index + 1}. ${item ? item.name : '-'}`
+      })
+      .join('\n')
+
+    // Get the unranked items
+    const rankedItemNames = input.currentRanking.map((item) => item.name)
+    const unrankedItems = salvageItems
+      .filter((item) => !rankedItemNames.includes(item.name))
+      .map((item) => `- ${item.name}`)
+      .join('\n')
+
+    return `${rankedItemsText}
+
+${unrankedItems.length > 0 ? `Still not ranked:\n${unrankedItems}` : ''}`
+  })()
 
   const modifiedDialogueHistory =
     input.dialogueHistory.length === 0

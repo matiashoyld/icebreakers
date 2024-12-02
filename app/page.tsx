@@ -110,9 +110,13 @@ export default function BreakoutRoomSimulator() {
         participants,
         currentTurn: currentStep,
         dialogueHistory,
-        currentRanking: itemRanking.filter(
-          (item): item is (typeof salvageItems)[0] => item !== undefined
-        ),
+        currentRanking: itemRanking
+          .map((item) =>
+            item
+              ? { ...item, initialRank: itemRanking.indexOf(item) + 1 }
+              : null
+          )
+          .filter((item): item is (typeof salvageItems)[0] => item !== null),
         scenario: selectedScenario!,
       })
 

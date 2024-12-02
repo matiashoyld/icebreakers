@@ -1,3 +1,4 @@
+import { salvageItems } from '@/app/data/data'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
@@ -32,6 +33,14 @@ export function SurvivalItemRanking({
   itemRanking,
   currentStep,
 }: SurvivalItemRankingProps) {
+  // Get unranked items
+  const rankedItemNames = itemRanking
+    .filter((item): item is NonNullable<typeof item> => item !== undefined)
+    .map((item) => item.name)
+  const unrankedItems = salvageItems.filter(
+    (item) => !rankedItemNames.includes(item.name)
+  )
+
   return (
     <Card className='w-1/4 shadow-none overflow-hidden flex flex-col'>
       <CardHeader>
@@ -89,6 +98,19 @@ export function SurvivalItemRanking({
               })}
             </TableBody>
           </Table>
+
+          {unrankedItems.length > 0 && (
+            <div className='mt-4'>
+              <h4 className='text-sm font-medium mb-2'>Still not ranked:</h4>
+              <ul className='space-y-1'>
+                {unrankedItems.map((item) => (
+                  <li key={item.id} className='text-sm text-muted-foreground'>
+                    {item.emoji} {item.name}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </ScrollArea>
       </CardContent>
     </Card>
