@@ -6,6 +6,8 @@ import {
   leadershipPrompt,
   socialPrompt,
 } from '@/lib/llm/prompts/prompts'
+import { selectNextParticipant } from '@/lib/llm/interestScore'
+import OpenAI from 'openai'
 
 export type SimulationContext = {
   participants: Participant[]
@@ -25,11 +27,39 @@ interface SimulationInput {
 }
 
 export async function getNextSimulationStep(
-  input: SimulationInput,
-  currentParticipantId: number
-): Promise<SimulationStep> {
+  input: SimulationInput
+): Promise<{ step: SimulationStep; nextParticipantId: number }> {
+  // Calculate interest scores using the API endpoint
+  const interestScoreResponse = await fetch('/api/interest-scores', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      participants: input.participants,
+      conversationHistory: input.dialogueHistory.map((msg, index) => ({
+        participantId: (index % input.participants.length) + 1,
+        action: 'speak',
+        message: msg,
+        thinking: '',
+        prompt: ''
+      })),
+      currentRanking: input.currentRanking.map(item => item.name),
+      currentTurn: input.currentTurn,
+    }),
+  })
+
+  if (!interestScoreResponse.ok) {
+    throw new Error('Failed to calculate interest scores')
+  }
+
+  const { scores } = await interestScoreResponse.json()
+
+  // Select the next participant based on interest scores
+  const nextParticipantId = selectNextParticipant(scores)
+  
   const participant = input.participants.find(
-    (p) => p.id === currentParticipantId
+    (p) => p.id === nextParticipantId
   )
   if (!participant) throw new Error('Participant not found')
 
@@ -37,7 +67,7 @@ export async function getNextSimulationStep(
   switch (input.scenario.id) {
     case 'leadership': {
       const leaderId = getOrSetLeader(input.participants)
-      const isLeader = currentParticipantId === leaderId
+      const isLeader = nextParticipantId === leaderId
       const leader = input.participants.find((p) => p.id === leaderId)
       if (!leader) throw new Error('Leader not found')
       prompt = leadershipPrompt(leader.name, isLeader)
@@ -82,7 +112,7 @@ export async function getNextSimulationStep(
         dialogueHistory: input.dialogueHistory,
         currentRanking: input.currentRanking,
       },
-      currentParticipantId,
+      currentParticipantId: nextParticipantId,
       promptInputs,
       prompt,
     }),
@@ -95,7 +125,7 @@ export async function getNextSimulationStep(
   const responseData = await response.json()
 
   const step: SimulationStep = {
-    participantId: currentParticipantId,
+    participantId: nextParticipantId,
     action: responseData.action,
     message: responseData.message,
     thinking: responseData.thinking,
@@ -103,7 +133,7 @@ export async function getNextSimulationStep(
     rankingChanges: responseData.rankingChanges,
   }
 
-  return step
+  return { step, nextParticipantId }
 }
 
 const leaderMap = new Map<string, number>()

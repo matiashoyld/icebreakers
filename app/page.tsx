@@ -105,22 +105,16 @@ export default function BreakoutRoomSimulator() {
         setHasStarted(true)
       }
 
-      // Determine which participant's turn it is
-      const currentParticipantId = (currentStep % participants.length) + 1
-
-      // Get next step from LLM
-      const step = await getNextSimulationStep(
-        {
-          participants,
-          currentTurn: currentStep,
-          dialogueHistory,
-          currentRanking: itemRanking.filter(
-            (item): item is (typeof salvageItems)[0] => item !== undefined
-          ),
-          scenario: selectedScenario!,
-        },
-        currentParticipantId
-      )
+      // Get next step from LLM with interest-based participant selection
+      const { step, nextParticipantId } = await getNextSimulationStep({
+        participants,
+        currentTurn: currentStep,
+        dialogueHistory,
+        currentRanking: itemRanking.filter(
+          (item): item is (typeof salvageItems)[0] => item !== undefined
+        ),
+        scenario: selectedScenario!,
+      })
 
       // Process any ranking changes requested by the agent
       if (step.rankingChanges && step.rankingChanges.length > 0) {
@@ -182,7 +176,7 @@ export default function BreakoutRoomSimulator() {
       // Update participants state
       setParticipants((prevParticipants) =>
         prevParticipants.map((p) => {
-          if (p.id === step.participantId) {
+          if (p.id === nextParticipantId) {
             const updatedParticipant = { ...p }
             if (step.action === 'toggleCamera') {
               updatedParticipant.cameraOn = !p.cameraOn
@@ -207,13 +201,13 @@ export default function BreakoutRoomSimulator() {
       if (step.action === 'speak' && step.message) {
         const newMessage = {
           id: messages.length + 1,
-          participantId: step.participantId,
+          participantId: nextParticipantId,
           content: step.message,
         }
         setMessages((prev) => [...prev, newMessage])
         setDialogueHistory((prev) => [
           ...prev,
-          `${participants.find((p) => p.id === step.participantId)?.name}: ${
+          `${participants.find((p) => p.id === nextParticipantId)?.name}: ${
             step.message
           }`,
         ])
@@ -222,7 +216,7 @@ export default function BreakoutRoomSimulator() {
       // Update current thinking and agent
       setCurrentThinking(step.thinking || '')
       setCurrentAgent(
-        participants.find((p) => p.id === step.participantId) || null
+        participants.find((p) => p.id === nextParticipantId) || null
       )
       setCurrentDecision(
         `${step.action}${step.message ? `: "${step.message}"` : ''}`
@@ -235,7 +229,7 @@ export default function BreakoutRoomSimulator() {
         {
           turn: currentStep + 1,
           engagement: newEngagement,
-          agentId: step.participantId,
+          agentId: nextParticipantId,
         },
       ])
 
@@ -244,14 +238,14 @@ export default function BreakoutRoomSimulator() {
         ...prev,
         {
           turnNumber: currentStep + 1,
-          participantId: step.participantId,
+          participantId: nextParticipantId,
           action: step.action,
           message: step.message,
           thinking: step.thinking || '',
           decision: step.action,
           engagementScore: newEngagement,
           cameraStatus:
-            participants.find((p) => p.id === step.participantId)?.cameraOn ||
+            participants.find((p) => p.id === nextParticipantId)?.cameraOn ||
             false,
           prompt: step.prompt || '',
         },

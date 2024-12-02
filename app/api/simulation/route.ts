@@ -18,6 +18,9 @@ async function getOpenAIClient() {
 
 export async function POST(request: Request) {
   try {
+    console.log('\n=== Simulation API Call ===')
+    console.log('Time:', new Date().toISOString())
+    
     const openai = await getOpenAIClient()
 
     const body = await request.json()
@@ -27,8 +30,17 @@ export async function POST(request: Request) {
       prompt: string
     }
 
+    console.log('\nInput Data:')
+    console.log('- Current Participant ID:', currentParticipantId)
+    console.log('- Prompt Inputs Length:', promptInputs.length)
+    
     // Use the provided prompt instead of TURN_PROMPT
     const filledPrompt = await generatePrompt(promptInputs, prompt)
+    
+    console.log('\nGenerated Prompt:')
+    console.log('---START PROMPT---')
+    console.log(filledPrompt)
+    console.log('---END PROMPT---')
 
     console.log('Filled prompt:', filledPrompt)
 
@@ -42,7 +54,16 @@ export async function POST(request: Request) {
 
     const output = response.choices[0].message.content || ''
 
+    console.log('\nLLM Response:')
+    console.log('---START RESPONSE---')
+    console.log(output)
+    console.log('---END RESPONSE---')
+
     const parsed = extractFirstJsonDict(output)
+
+    console.log('\nExtracted Action:')
+    console.log(JSON.stringify(parsed, null, 2))
+    console.log('=== End Simulation API Call ===\n')
 
     if (!parsed) {
       throw new Error('Failed to parse LLM response')

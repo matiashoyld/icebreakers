@@ -89,3 +89,20 @@ export interface RankingChange {
   /** The new position (1-based) where this item should be placed */
   newRank: number
 }
+
+/**
+ * Represents an interest score response from the LLM.
+ */
+export type InterestScoreResponse = {
+  interestScore: number
+  reasoning: string
+}
+
+/**
+ * Represents a participant's interest score and related data.
+ */
+export type ParticipantInterestScore = {
+  participantId: number
+  score: number
+  reasoning: string
+}
