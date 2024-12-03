@@ -1,9 +1,19 @@
+import dotenv from 'dotenv';		
+
+dotenv.config();
+
 export async function callLLM(prompt: string): Promise<{ score: number }> {
+  const apiKey = process.env.OPENAI_API_KEY;
+
+  if (!apiKey) {
+    throw new Error('API key is not set in the environment');
+  }
+
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer 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`, 
+      'Authorization': `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
       model: 'gpt-4', // Specify the model you want to use
@@ -16,5 +26,4 @@ export async function callLLM(prompt: string): Promise<{ score: number }> {
   }
 
   const data = await response.json();
-  return { score: data.choices[0].message.content }; // Adjust according to your API response structure
-} 
+  return { score: data.choices[0].message.content }; // Adjust according to your API response structure 

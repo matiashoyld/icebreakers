@@ -260,6 +260,8 @@ export async function evaluateQualityOfContributions(agentResponse: string): Pro
 
 export function evaluateQualityOfContributionPrompt(agentResponse: string, context: any): string {
   return `Evaluate the quality of the following contribution: "${agentResponse}". Provide a score from 0 to 100 based on the context: ${JSON.stringify(context)}`;
+}
+
 export function satisfactionScorePrompt(): string {
   return `
 [Input]
