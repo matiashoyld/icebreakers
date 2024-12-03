@@ -1,5 +1,6 @@
 import { Participant } from '@/app/types/types'
 import { prisma } from '@/lib/db'
+import { evaluateQualityOfContributionPrompt } from '@/lib/llm/prompts/prompts';
 
 export type SimulationTurn = {
   turnNumber: number
@@ -224,4 +225,23 @@ export async function calculateAverageMetrics() {
   }
 
   return averageMetrics
+}
+
+export async function evaluateQualityOfContribution(agentResponse: string, context: any): Promise<number> {
+  const prompt = evaluateQualityOfContributionPrompt(agentResponse, context);
+  
+  const response = await fetch('/api/evaluate-quality', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ prompt }),
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to evaluate quality of contribution');
+  }
+
+  const { qualityScore } = await response.json();
+  return qualityScore;
 }

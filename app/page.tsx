@@ -34,6 +34,7 @@ import {
 import { initialParticipants, salvageItems } from '@/app/data/data'
 import { EngagementData, Message, Participant } from '@/app/types/types'
 import { getNextSimulationStep } from '@/lib/simulation/simulation-manager'
+import { evaluateQualityOfContribution } from '@/lib/services/simulation-service'; // Import the function
 
 type Change = {
   item: { name: string; emoji: string }
@@ -343,22 +344,38 @@ export default function BreakoutRoomSimulator() {
       ])
 
       // Store turn data
-      setSimulationTurns((prev) => [
-        ...prev,
-        {
-          turnNumber: currentStep + 1,
-          participantId: nextParticipantId,
-          action: step.action,
-          message: step.message,
-          thinking: step.thinking || '',
-          decision: step.action,
-          engagementScore: newEngagement,
-          cameraStatus:
-            participants.find((p) => p.id === nextParticipantId)?.cameraOn ||
-            false,
-          prompt: step.prompt || '',
-        },
-      ])
+      const newTurn = {
+        turnNumber: currentStep + 1,
+        participantId: nextParticipantId,
+        action: step.action,
+        message: step.message,
+        thinking: step.thinking || '',
+        decision: step.action,
+        engagementScore: newEngagement,
+        cameraStatus:
+          participants.find((p) => p.id === nextParticipantId)?.cameraOn ||
+          false,
+        prompt: step.prompt || '',
+      };
+
+      setSimulationTurns((prev) => [...prev, newTurn]);
+
+      // Evaluate quality of contribution
+      const qualityScore = await evaluateQualityOfContribution(step.message, {
+        dialogueHistory,
+        currentRanking: itemRanking,
+        currentTurn: currentStep + 1,
+      });
+
+      // Update the turn with quality score
+      setSimulationTurns((prev) => {
+        const updatedTurns = [...prev];
+        updatedTurns[updatedTurns.length - 1] = {
+          ...newTurn,
+          qualityOfContributions: qualityScore, // Add quality score to the turn
+        };
+        return updatedTurns;
+      });
 
       // Increment step
       setCurrentStep((prev) => prev + 1)
