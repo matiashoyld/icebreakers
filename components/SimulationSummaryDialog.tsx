@@ -39,7 +39,6 @@ type SimulationSummaryDialogProps = {
     realRank: number
   }[]
   totalTurns: number
-  totalScore: number
   simulationType: 'baseline' | 'leadership' | 'social' | 'gamification'
 }
 
@@ -66,7 +65,6 @@ export function SimulationSummaryDialog({
   participants,
   finalRanking,
   totalTurns,
-  totalScore,
   simulationType,
 }: SimulationSummaryDialogProps) {
   const averageWordsSpoken =

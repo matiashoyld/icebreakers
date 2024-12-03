@@ -582,7 +582,6 @@ export default function BreakoutRoomSimulator() {
             }
           })}
         totalTurns={currentStep}
-        totalScore={calculateTaskScore()}
         simulationType={selectedScenario?.id || 'baseline'}
       />
       <Toaster />
