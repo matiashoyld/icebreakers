@@ -4,6 +4,24 @@ import { interestScorePrompt } from './prompts/prompts'
 import { Participant, InterestScoreResponse, ParticipantInterestScore, SimulationStep } from '@/app/types/types'
 
 /**
+ * Cleans a string that might contain a JSON object with markdown formatting
+ */
+function cleanJsonResponse(response: string): string {
+  // Remove markdown code block syntax if present
+  response = response.replace(/```json\n?/g, '').replace(/```\n?/g, '')
+  
+  // Find the first '{' and last '}' to extract the JSON object
+  const startIndex = response.indexOf('{')
+  const endIndex = response.lastIndexOf('}')
+  
+  if (startIndex === -1 || endIndex === -1) {
+    throw new Error('No valid JSON object found in response')
+  }
+  
+  return response.slice(startIndex, endIndex + 1)
+}
+
+/**
  * Calculates interest scores for all participants based on the current conversation state
  */
 export async function calculateInterestScores(
@@ -36,7 +54,7 @@ export async function calculateInterestScores(
     console.log('---END PROMPT---')
 
     const completion = await openai.chat.completions.create({
-      model: 'gpt-3.5-turbo',
+      model: 'gpt-4o-mini',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.7,
       max_tokens: 500
@@ -48,16 +66,33 @@ export async function calculateInterestScores(
     console.log(responseContent)
     console.log('---END RESPONSE---')
 
-    const response = JSON.parse(responseContent) as InterestScoreResponse
+    try {
+      // Clean and parse the response
+      const cleanedResponse = cleanJsonResponse(responseContent)
+      const response = JSON.parse(cleanedResponse) as InterestScoreResponse
 
-    console.log('\nParsed Score:')
-    console.log(`Score: ${response.interestScore}`)
-    console.log(`Reasoning: ${response.reasoning}`)
+      // Validate the required fields
+      if (typeof response.interestScore !== 'number' || typeof response.reasoning !== 'string') {
+        throw new Error('Invalid response format: missing required fields')
+      }
 
-    return {
-      participantId: participant.id,
-      score: response.interestScore,
-      reasoning: response.reasoning
+      console.log('\nParsed Score:')
+      console.log(`Score: ${response.interestScore}`)
+      console.log(`Reasoning: ${response.reasoning}`)
+
+      return {
+        participantId: participant.id,
+        score: response.interestScore,
+        reasoning: response.reasoning
+      }
+    } catch (error) {
+      console.error('Error parsing response:', error)
+      // Return a default score in case of parsing error
+      return {
+        participantId: participant.id,
+        score: 50, // default middle score
+        reasoning: 'Error parsing response'
+      }
     }
   })
 
