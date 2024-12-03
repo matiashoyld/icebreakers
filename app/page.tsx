@@ -100,47 +100,73 @@ export default function BreakoutRoomSimulator() {
     return participantData[0]?.engagement ?? 0
   }
 
+  // Add a function to calculate the task score consistently
+  const calculateTaskScore = useCallback(() => {
+    const rankingWithDiff = Array(15)
+      .fill(null)
+      .map((_, index) => {
+        const correctItem = salvageItems[index]
+        const rankedPosition = itemRanking.findIndex(
+          (item) => item?.name === correctItem.name
+        )
+
+        if (rankedPosition !== -1) {
+          // Item is ranked - difference between its current rank and real rank
+          return Math.abs(rankedPosition + 1 - correctItem.realRank)
+        } else {
+          // Item is not ranked - difference is its real rank
+          return correctItem.realRank
+        }
+      })
+
+    return rankingWithDiff.reduce((sum, diff) => sum + diff, 0)
+  }, [itemRanking])
+
   // Add this function to handle saving simulation data
-  const saveSimulationData = useCallback(async () => {
-    try {
-      setLoadingButton('end')
+  const saveSimulationData = useCallback(
+    async (taskScore: number) => {
+      try {
+        setLoadingButton('end')
 
-      const response = await fetch('/api/simulations', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          simulationType: selectedScenario!.id,
-          participants,
-          turns: simulationTurns,
-        }),
-      })
+        const response = await fetch('/api/simulations', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            simulationType: selectedScenario!.id,
+            participants,
+            turns: simulationTurns,
+            taskScore,
+          }),
+        })
 
-      if (!response.ok) {
-        throw new Error('Failed to save simulation')
+        if (!response.ok) {
+          throw new Error('Failed to save simulation')
+        }
+
+        const { id } = await response.json()
+
+        toast({
+          title: 'Simulation Saved',
+          description: `Simulation #${id} has been saved successfully.`,
+          className: 'border-[0.5px] border-black bg-white',
+        })
+      } catch (error) {
+        console.error('Error saving simulation:', error)
+        toast({
+          title: 'Error',
+          description: 'Failed to save simulation. Please try again.',
+          variant: 'destructive',
+        })
+      } finally {
+        setLoadingButton(null)
       }
+    },
+    [participants, selectedScenario, simulationTurns, itemRanking, toast]
+  )
 
-      const { id } = await response.json()
-
-      toast({
-        title: 'Simulation Saved',
-        description: `Simulation #${id} has been saved successfully.`,
-        className: 'border-[0.5px] border-black bg-white',
-      })
-    } catch (error) {
-      console.error('Error saving simulation:', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to save simulation. Please try again.',
-        variant: 'destructive',
-      })
-    } finally {
-      setLoadingButton(null)
-    }
-  }, [participants, selectedScenario, simulationTurns, toast])
-
-  // Modify handleNextStep to save data when simulation ends
+  // Modify handleNextStep to use calculateTaskScore
   const handleNextStep = useCallback(async () => {
     if (isLoading || isStepInProgress || simulationEnded) return
 
@@ -190,7 +216,8 @@ export default function BreakoutRoomSimulator() {
         setSimulationEnded(true)
         setIsEndDialogOpen(true)
         setIsPlaying(false)
-        await saveSimulationData() // Save data when simulation ends naturally
+        const score = calculateTaskScore()
+        await saveSimulationData(score) // Use calculated score
       }
 
       // Process any ranking changes requested by the agent
@@ -355,6 +382,7 @@ export default function BreakoutRoomSimulator() {
     recentChanges,
     simulationEnded,
     saveSimulationData,
+    calculateTaskScore,
   ])
 
   // Modify handlePlayPauseSimulation function
@@ -413,13 +441,14 @@ export default function BreakoutRoomSimulator() {
     }
   }, [messages])
 
-  // Replace handleEndSimulation with this new version
+  // Modify handleEndSimulation to use calculateTaskScore
   const handleEndSimulation = useCallback(async () => {
     setIsPlaying(false)
     setSimulationEnded(true)
     setIsEndDialogOpen(true)
-    await saveSimulationData()
-  }, [saveSimulationData])
+    const score = calculateTaskScore()
+    await saveSimulationData(score)
+  }, [calculateTaskScore, saveSimulationData])
 
   return (
     <div className='h-screen p-6'>
@@ -501,6 +530,7 @@ export default function BreakoutRoomSimulator() {
               loadingButton={loadingButton}
               simulationTurns={simulationTurns}
               selectedScenario={selectedScenario}
+              simulationEnded={simulationEnded}
             />
           </CardFooter>
         </Card>
@@ -529,11 +559,10 @@ export default function BreakoutRoomSimulator() {
         finalRanking={Array(15)
           .fill(null)
           .map((_, index) => {
-            // First, check if there's an item actually ranked at this position
             const itemAtPosition = itemRanking[index]
+            const correctItem = salvageItems[index]
 
             if (itemAtPosition) {
-              // If there's a ranked item at this position, show it with its real rank
               return {
                 name: itemAtPosition.name,
                 emoji: itemAtPosition.emoji,
@@ -545,17 +574,16 @@ export default function BreakoutRoomSimulator() {
               }
             }
 
-            // For unranked positions, show the item that should be there according to real ranking
-            const correctItem = salvageItems[index]
             return {
               name: correctItem.name,
               emoji: correctItem.emoji,
-              rank: 0, // Use 0 instead of '-' to match the type
-              realRank: index + 1,
+              rank: 0,
+              realRank: correctItem.realRank,
             }
           })}
         totalTurns={currentStep}
-        totalScore={100 - currentStep * 2}
+        totalScore={calculateTaskScore()}
+        simulationType={selectedScenario?.id || 'baseline'}
       />
       <Toaster />
     </div>

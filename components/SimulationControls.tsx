@@ -2,7 +2,7 @@ import { MAX_SIMULATION_TURNS } from '@/app/constants/constants'
 import { Scenario } from '@/components/ScenarioSelector'
 import { Button } from '@/components/ui/button'
 import { SimulationTurn } from '@/lib/services/simulation-service'
-import { Loader2, Pause, Play, SkipForward, Square } from 'lucide-react'
+import { Loader2, Pause, Play, Save, SkipForward } from 'lucide-react'
 
 interface SimulationControlsProps {
   onNextStep: () => void
@@ -15,6 +15,7 @@ interface SimulationControlsProps {
   loadingButton: 'next' | 'play' | 'end' | null
   simulationTurns: SimulationTurn[]
   selectedScenario: Scenario | null
+  simulationEnded?: boolean
 }
 
 export function SimulationControls({
@@ -28,13 +29,16 @@ export function SimulationControls({
   loadingButton,
   simulationTurns,
   selectedScenario,
+  simulationEnded = false,
 }: SimulationControlsProps) {
   return (
     <div className='flex items-center justify-between gap-6 w-full'>
       <div className='flex items-center gap-3'>
         <Button
           onClick={onNextStep}
-          disabled={isLoading || isPlaying || !selectedScenario}
+          disabled={
+            isLoading || isPlaying || !selectedScenario || simulationEnded
+          }
           className='w-28 h-9'
           variant={'ghost'}
         >
@@ -59,7 +63,9 @@ export function SimulationControls({
         <Button
           onClick={onPlayPauseSimulation}
           disabled={
-            !selectedScenario || (!isPlaying && loadingButton === 'next')
+            !selectedScenario ||
+            (!isPlaying && loadingButton === 'next') ||
+            simulationEnded
           }
           className='w-28 h-9'
           variant='ghost'
@@ -94,7 +100,12 @@ export function SimulationControls({
 
       <Button
         onClick={onEndSimulation}
-        disabled={isLoading || !hasStarted || simulationTurns.length === 0}
+        disabled={
+          isLoading ||
+          !hasStarted ||
+          simulationTurns.length === 0 ||
+          simulationEnded
+        }
         variant='ghost'
         className='w-28 h-9'
       >
@@ -105,7 +116,7 @@ export function SimulationControls({
           </>
         ) : (
           <>
-            <Square className='mr-2 h-4 w-4' />
+            <Save className='mr-2 h-4 w-4' />
             End
           </>
         )}

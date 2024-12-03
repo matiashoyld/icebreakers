@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
@@ -41,11 +40,29 @@ type SimulationSummaryDialogProps = {
   }[]
   totalTurns: number
   totalScore: number
+  simulationType: 'baseline' | 'leadership' | 'social' | 'gamification'
 }
 
 type SalvageItem = {
   name: string
   emoji: string
+}
+
+function getTypeStyles(
+  type: 'baseline' | 'leadership' | 'social' | 'gamification'
+): string {
+  switch (type) {
+    case 'baseline':
+      return 'bg-zinc-100 text-zinc-800'
+    case 'leadership':
+      return 'bg-blue-100 text-blue-800'
+    case 'social':
+      return 'bg-purple-100 text-purple-800'
+    case 'gamification':
+      return 'bg-green-100 text-green-800'
+    default:
+      return 'bg-gray-100 text-gray-800'
+  }
 }
 
 export function SimulationSummaryDialog({
@@ -55,6 +72,7 @@ export function SimulationSummaryDialog({
   finalRanking,
   totalTurns,
   totalScore,
+  simulationType,
 }: SimulationSummaryDialogProps) {
   const averageWordsSpoken =
     participants.reduce((sum, p) => sum + p.wordsSpoken, 0) /
@@ -105,12 +123,20 @@ export function SimulationSummaryDialog({
       <DialogContent className='max-w-4xl h-[90vh] p-0 flex flex-col'>
         <ScrollArea className='flex-grow'>
           <div className='p-6 space-y-6'>
-            <DialogHeader>
-              <DialogTitle>Simulation Summary</DialogTitle>
-              <DialogDescription>
-                Overview of the icebreaker activity results after {totalTurns}{' '}
-                turns
-              </DialogDescription>
+            <DialogHeader className='flex flex-row items-center'>
+              <div className='flex items-center gap-3'>
+                <DialogTitle className='text-xl font-semibold'>
+                  Simulation Summary
+                </DialogTitle>
+                <div
+                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getTypeStyles(
+                    simulationType
+                  )}`}
+                >
+                  {simulationType.charAt(0).toUpperCase() +
+                    simulationType.slice(1)}
+                </div>
+              </div>
             </DialogHeader>
 
             <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4'>
@@ -121,7 +147,7 @@ export function SimulationSummaryDialog({
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className='text-2xl font-bold'>{totalScore}</div>
+                  <div className='text-2xl font-bold'>{totalDiff}</div>
                 </CardContent>
               </Card>
               <Card>
@@ -181,10 +207,11 @@ export function SimulationSummaryDialog({
                     {participants.map((participant) => (
                       <TableRow key={participant.id}>
                         <TableCell>
-                          <Avatar>
+                          <Avatar className='h-8 w-8'>
                             <AvatarImage
                               src={participant.avatar}
                               alt={`${participant.name}'s avatar`}
+                              className='object-cover'
                             />
                             <AvatarFallback>
                               {participant.name[0]}
