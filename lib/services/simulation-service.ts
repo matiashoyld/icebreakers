@@ -22,6 +22,7 @@ export type SaveSimulationParams = {
   qualityOfContributions?: number
   taskCompletionEffectiveness?: number
   postSessionSatisfactionScores?: number
+  taskScore: number
 }
 
 export async function saveSimulation({
@@ -33,6 +34,7 @@ export async function saveSimulation({
   qualityOfContributions,
   taskCompletionEffectiveness,
   postSessionSatisfactionScores,
+  taskScore,
 }: SaveSimulationParams) {
   return await prisma.$transaction(async (tx) => {
     const simulation = await tx.simulation.create({
@@ -44,6 +46,7 @@ export async function saveSimulation({
         qualityOfContributions,
         taskCompletionEffectiveness,
         postSessionSatisfactionScores,
+        taskScore,
       },
     })
 

@@ -22,6 +22,7 @@ import { MessageItem } from '@/components/Message'
 import { ParticipantVideo } from '@/components/ParticipantVideo'
 import { ScenarioSelector, type Scenario } from '@/components/ScenarioSelector'
 import { SimulationControls } from '@/components/SimulationControls'
+import { SimulationSummaryDialog } from '@/components/SimulationSummaryDialog'
 import { SurvivalItemRanking } from '@/components/SurvivalItemRanking'
 import { Toaster } from '@/components/ui/toaster'
 
@@ -77,12 +78,19 @@ export default function BreakoutRoomSimulator() {
 
   // Add this with other state variables at the top
   const [loadingButton, setLoadingButton] = useState<
-    'next' | 'play' | 'save' | null
+    'next' | 'play' | 'end' | null
   >(null)
 
   const [selectedScenario, setSelectedScenario] = useState<Scenario | null>(
     null
   )
+
+  // Add this state to track if a step is in progress
+  const [isStepInProgress, setIsStepInProgress] = useState(false)
+
+  const [isEndDialogOpen, setIsEndDialogOpen] = useState(false)
+  const [recentChanges, setRecentChanges] = useState<boolean[]>([])
+  const [simulationEnded, setSimulationEnded] = useState(false)
 
   const { toast } = useToast()
 
@@ -97,10 +105,80 @@ export default function BreakoutRoomSimulator() {
     return participantData[0]?.engagement ?? 0
   }
 
-  // Modify handleNextStep to handle ranking changes
+  // Add a function to calculate the task score consistently
+  const calculateTaskScore = useCallback(() => {
+    const rankingWithDiff = Array(15)
+      .fill(null)
+      .map((_, index) => {
+        const correctItem = salvageItems[index]
+        const rankedPosition = itemRanking.findIndex(
+          (item) => item?.name === correctItem.name
+        )
+
+        if (rankedPosition !== -1) {
+          // Item is ranked - difference between its current rank and real rank
+          return Math.abs(rankedPosition + 1 - correctItem.realRank)
+        } else {
+          // Item is not ranked - difference is its real rank
+          return correctItem.realRank
+        }
+      })
+
+    return rankingWithDiff.reduce((sum, diff) => sum + diff, 0)
+  }, [itemRanking])
+
+  // Add this function to handle saving simulation data
+  const saveSimulationData = useCallback(
+    async (taskScore: number) => {
+      try {
+        setLoadingButton('end')
+
+        const response = await fetch('/api/simulations', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            simulationType: selectedScenario!.id,
+            participants,
+            turns: simulationTurns,
+            taskScore,
+          }),
+        })
+
+        if (!response.ok) {
+          throw new Error('Failed to save simulation')
+        }
+
+        const { id } = await response.json()
+
+        toast({
+          title: 'Simulation Saved',
+          description: `Simulation #${id} has been saved successfully.`,
+          className: 'border-[0.5px] border-black bg-white',
+        })
+      } catch (error) {
+        console.error('Error saving simulation:', error)
+        toast({
+          title: 'Error',
+          description: 'Failed to save simulation. Please try again.',
+          variant: 'destructive',
+        })
+      } finally {
+        setLoadingButton(null)
+      }
+    },
+    [participants, selectedScenario, simulationTurns, itemRanking, toast]
+  )
+
+  // Modify handleNextStep to use calculateTaskScore
   const handleNextStep = useCallback(async () => {
-    if (isLoading) return
+    if (isLoading || isStepInProgress || simulationEnded) return
+
+    setIsLoading(true)
     setLoadingButton('next')
+    setIsStepInProgress(true)
+
     try {
       // Start the simulation if it hasn't started
       if (!hasStarted) {
@@ -110,22 +188,42 @@ export default function BreakoutRoomSimulator() {
         setHasStarted(true)
       }
 
-      // Determine which participant's turn it is
-      const currentParticipantId = (currentStep % participants.length) + 1
-
-      // Get next step from LLM
-      const step = await getNextSimulationStep(
-        {
+      // Get next step from LLM with interest-based participant selection
+      const { step, nextParticipantId, endCondition } =
+        await getNextSimulationStep({
           participants,
           currentTurn: currentStep,
           dialogueHistory,
-          currentRanking: itemRanking.filter(
-            (item): item is (typeof salvageItems)[0] => item !== undefined
-          ),
+          currentRanking: itemRanking
+            .map((item) =>
+              item
+                ? {
+                    ...item,
+                    realRank: itemRanking.indexOf(item) + 1,
+                  }
+                : null
+            )
+            .filter((item): item is (typeof salvageItems)[0] => item !== null),
           scenario: selectedScenario!,
-        },
-        currentParticipantId
+          recentChanges,
+        })
+
+      // Update recent changes
+      const hadChanges = step.rankingChanges && step.rankingChanges.length > 0
+      setRecentChanges((prev) =>
+        [...prev, hadChanges]
+          .slice(-4)
+          .filter((change): change is boolean => change !== undefined)
       )
+
+      // Handle simulation end
+      if (endCondition.ended) {
+        setSimulationEnded(true)
+        setIsEndDialogOpen(true)
+        setIsPlaying(false)
+        const score = calculateTaskScore()
+        await saveSimulationData(score) // Use calculated score
+      }
 
       // Process any ranking changes requested by the agent
       if (step.rankingChanges && step.rankingChanges.length > 0) {
@@ -174,7 +272,7 @@ export default function BreakoutRoomSimulator() {
             id: salvageItems.find((i) => i.name === change.item.name)?.id || 0,
             name: change.item.name,
             emoji: change.item.emoji,
-            initialRank: change.toRank,
+            realRank: change.toRank,
           }
         })
         setItemRanking(newRanking)
@@ -187,7 +285,7 @@ export default function BreakoutRoomSimulator() {
       // Update participants state
       setParticipants((prevParticipants) =>
         prevParticipants.map((p) => {
-          if (p.id === step.participantId) {
+          if (p.id === nextParticipantId) {
             const updatedParticipant = { ...p }
             if (step.action === 'toggleCamera') {
               updatedParticipant.cameraOn = !p.cameraOn
@@ -212,22 +310,22 @@ export default function BreakoutRoomSimulator() {
       if (step.action === 'speak' && step.message) {
         const newMessage = {
           id: messages.length + 1,
-          participantId: step.participantId,
+          participantId: nextParticipantId,
           content: step.message,
         }
         setMessages((prev) => [...prev, newMessage])
         setDialogueHistory((prev) => [
           ...prev,
-          `${participants.find((p) => p.id === step.participantId)?.name}: ${
-            step.message
-          }`,
+          `${prev.length + 1}. ${
+            participants.find((p) => p.id === nextParticipantId)?.name
+          }: ${step.message}`,
         ])
       }
 
       // Update current thinking and agent
       setCurrentThinking(step.thinking || '')
       setCurrentAgent(
-        participants.find((p) => p.id === step.participantId) || null
+        participants.find((p) => p.id === nextParticipantId) || null
       )
       setCurrentDecision(
         `${step.action}${step.message ? `: "${step.message}"` : ''}`
@@ -240,7 +338,7 @@ export default function BreakoutRoomSimulator() {
         {
           turn: currentStep + 1,
           engagement: newEngagement,
-          agentId: step.participantId,
+          agentId: nextParticipantId,
         },
       ])
 
@@ -249,14 +347,14 @@ export default function BreakoutRoomSimulator() {
         ...prev,
         {
           turnNumber: currentStep + 1,
-          participantId: step.participantId,
+          participantId: nextParticipantId,
           action: step.action,
           message: step.message,
           thinking: step.thinking || '',
           decision: step.action,
           engagementScore: newEngagement,
           cameraStatus:
-            participants.find((p) => p.id === step.participantId)?.cameraOn ||
+            participants.find((p) => p.id === nextParticipantId)?.cameraOn ||
             false,
           prompt: step.prompt || '',
         },
@@ -272,6 +370,7 @@ export default function BreakoutRoomSimulator() {
       )
       setIsPlaying(false)
     } finally {
+      setIsStepInProgress(false)
       setLoadingButton(null)
       setIsLoading(false)
     }
@@ -284,36 +383,56 @@ export default function BreakoutRoomSimulator() {
     selectedScenario,
     hasStarted,
     itemRanking,
+    isStepInProgress,
+    recentChanges,
+    simulationEnded,
+    saveSimulationData,
+    calculateTaskScore,
   ])
 
-  // Modify handlePlaySimulation to toggle play/pause
-  const handlePlayPauseSimulation = () => {
+  // Modify handlePlayPauseSimulation function
+  const handlePlayPauseSimulation = useCallback(() => {
+    if (isStepInProgress) return
+
     if (isPlaying) {
       // If currently playing, pause it
       setIsPlaying(false)
       setLoadingButton(null)
     } else {
       // If currently paused, start playing
-      setLoadingButton('play')
       setIsPlaying(true)
+      setLoadingButton('play')
 
       // If simulation hasn't started, trigger the first step
       if (!hasStarted) {
         handleNextStep()
       }
     }
-  }
+  }, [isPlaying, hasStarted, handleNextStep, isStepInProgress])
 
-  // Modify the play simulation useEffect to handle async
+  // Modify the play simulation useEffect
   useEffect(() => {
-    let timer: NodeJS.Timeout
-    if (isPlaying && !isLoading) {
-      timer = setTimeout(() => {
-        handleNextStep()
-      }, 2000)
+    let timeoutId: NodeJS.Timeout | null = null
+
+    const scheduleNextStep = () => {
+      if (isPlaying && !isStepInProgress) {
+        timeoutId = setTimeout(() => {
+          handleNextStep()
+        }, 2000)
+      }
     }
-    return () => clearTimeout(timer)
-  }, [isPlaying, handleNextStep, isLoading])
+
+    if (isPlaying && hasStarted && !isStepInProgress) {
+      scheduleNextStep()
+    }
+
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+        timeoutId = null
+      }
+    }
+  }, [isPlaying, hasStarted, handleNextStep, isStepInProgress])
 
   // Effect to auto-scroll the messages area
   useEffect(() => {
@@ -327,48 +446,14 @@ export default function BreakoutRoomSimulator() {
     }
   }, [messages])
 
-  // Add function to end and save simulation
-  const handleEndSimulation = async () => {
-    setLoadingButton('save')
-    try {
-      if (!selectedScenario) {
-        throw new Error('No scenario selected')
-      }
-
-      const response = await fetch('/api/simulations', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          participants,
-          turns: simulationTurns,
-          simulationType: selectedScenario.id,
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to save simulation')
-      }
-
-      const { id } = await response.json()
-
-      toast({
-        title: 'Simulation Saved',
-        description: `Simulation #${id} has been saved successfully.`,
-        className: 'border-[0.5px] border-black bg-white',
-      })
-    } catch (error) {
-      console.error('Error saving simulation:', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to save simulation. Please try again.',
-        variant: 'destructive',
-      })
-    } finally {
-      setLoadingButton(null)
-    }
-  }
+  // Modify handleEndSimulation to use calculateTaskScore
+  const handleEndSimulation = useCallback(async () => {
+    setIsPlaying(false)
+    setSimulationEnded(true)
+    setIsEndDialogOpen(true)
+    const score = calculateTaskScore()
+    await saveSimulationData(score)
+  }, [calculateTaskScore, saveSimulationData])
 
   return (
     <div className='h-screen p-6'>
@@ -450,6 +535,7 @@ export default function BreakoutRoomSimulator() {
               loadingButton={loadingButton}
               simulationTurns={simulationTurns}
               selectedScenario={selectedScenario}
+              simulationEnded={simulationEnded}
             />
           </CardFooter>
         </Card>
@@ -471,6 +557,38 @@ export default function BreakoutRoomSimulator() {
           </CardContent>
         </Card>
       </div>
+      <SimulationSummaryDialog
+        isOpen={isEndDialogOpen}
+        onClose={() => setIsEndDialogOpen(false)}
+        participants={participants}
+        finalRanking={Array(15)
+          .fill(null)
+          .map((_, index) => {
+            const itemAtPosition = itemRanking[index]
+            const correctItem = salvageItems[index]
+
+            if (itemAtPosition) {
+              return {
+                name: itemAtPosition.name,
+                emoji: itemAtPosition.emoji,
+                rank: index + 1,
+                realRank:
+                  salvageItems.findIndex(
+                    (i) => i.name === itemAtPosition.name
+                  ) + 1,
+              }
+            }
+
+            return {
+              name: correctItem.name,
+              emoji: correctItem.emoji,
+              rank: 0,
+              realRank: correctItem.realRank,
+            }
+          })}
+        totalTurns={currentStep}
+        simulationType={selectedScenario?.id || 'baseline'}
+      />
       <Toaster />
       <SimulationDashboard stepMetrics={stepMetrics} overallMetrics={overallMetrics} />
     </div>

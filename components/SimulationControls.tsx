@@ -12,9 +12,10 @@ interface SimulationControlsProps {
   isPlaying: boolean
   hasStarted: boolean
   currentStep: number
-  loadingButton: 'next' | 'play' | 'save' | null
+  loadingButton: 'next' | 'play' | 'end' | null
   simulationTurns: SimulationTurn[]
   selectedScenario: Scenario | null
+  simulationEnded?: boolean
 }
 
 export function SimulationControls({
@@ -28,17 +29,25 @@ export function SimulationControls({
   loadingButton,
   simulationTurns,
   selectedScenario,
+  simulationEnded = false,
 }: SimulationControlsProps) {
   return (
     <div className='flex items-center justify-between gap-6 w-full'>
       <div className='flex items-center gap-3'>
         <Button
           onClick={onNextStep}
-          disabled={isLoading || isPlaying || !selectedScenario}
+          disabled={
+            isLoading || isPlaying || !selectedScenario || simulationEnded
+          }
           className='w-28 h-9'
           variant={'ghost'}
         >
-          {!hasStarted ? (
+          {!isPlaying && loadingButton === 'next' ? (
+            <>
+              <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+              Wait...
+            </>
+          ) : !hasStarted ? (
             <>
               <Play className='mr-2 h-4 w-4' />
               Start
@@ -54,7 +63,9 @@ export function SimulationControls({
         <Button
           onClick={onPlayPauseSimulation}
           disabled={
-            !selectedScenario || (!isPlaying && loadingButton === 'next')
+            !selectedScenario ||
+            (!isPlaying && loadingButton === 'next') ||
+            simulationEnded
           }
           className='w-28 h-9'
           variant='ghost'
@@ -90,12 +101,15 @@ export function SimulationControls({
       <Button
         onClick={onEndSimulation}
         disabled={
-          isLoading || !hasStarted || simulationTurns.length === 0 || isPlaying
+          isLoading ||
+          !hasStarted ||
+          simulationTurns.length === 0 ||
+          simulationEnded
         }
         variant='ghost'
         className='w-28 h-9'
       >
-        {loadingButton === 'save' ? (
+        {loadingButton === 'end' ? (
           <>
             <Loader2 className='mr-2 h-4 w-4 animate-spin' />
             Wait...
@@ -103,7 +117,7 @@ export function SimulationControls({
         ) : (
           <>
             <Save className='mr-2 h-4 w-4' />
-            Save
+            End
           </>
         )}
       </Button>

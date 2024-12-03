@@ -125,7 +125,7 @@ export const columns: ColumnDef<Simulation>[] = [
       const score: number | null = row.getValue('taskScore')
       return (
         <div className='text-center'>
-          {score !== null ? `${score.toFixed(2)}%` : 'N/A'}
+          {score !== null ? Math.round(score) : 'N/A'}
         </div>
       )
     },
@@ -150,7 +150,9 @@ export const columns: ColumnDef<Simulation>[] = [
       const participation: number | undefined = row.getValue('avgParticipation')
       return (
         <div className='text-center'>
-          {participation !== undefined ? `${participation.toFixed(2)}%` : 'N/A'}
+          {participation !== undefined
+            ? `${Math.round(participation)}%`
+            : 'N/A'}
         </div>
       )
     },

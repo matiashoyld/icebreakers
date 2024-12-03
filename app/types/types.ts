@@ -10,6 +10,9 @@ export type Participant = {
   timesDoingNothing: number
   cameraToggles: number
   participationRate: number
+  speakingStyle: string
+  agentDescription: string
+  numberOfInteractions: number
 }
 
 /**
@@ -86,4 +89,29 @@ export interface RankingChange {
   item: string
   /** The new position (1-based) where this item should be placed */
   newRank: number
+}
+
+/**
+ * Represents an interest score response from the LLM.
+ */
+export type InterestScoreResponse = {
+  interestScore: number
+  reasoning: string
+}
+
+/**
+ * Represents a participant's interest score and related data.
+ */
+export type ParticipantInterestScore = {
+  participantId: number
+  score: number
+  reasoning: string
+}
+
+/**
+ * Represents an input to the simulation.
+ */
+export interface SimulationInput {
+  // ... existing properties ...
+  recentChanges?: boolean[]
 }
