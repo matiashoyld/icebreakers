@@ -12,6 +12,7 @@ export type Participant = {
   participationRate: number
   speakingStyle: string
   agentDescription: string
+  numberOfInteractions: number
 }
 
 /**
@@ -105,4 +106,12 @@ export type ParticipantInterestScore = {
   participantId: number
   score: number
   reasoning: string
+}
+
+/**
+ * Represents an input to the simulation.
+ */
+export interface SimulationInput {
+  // ... existing properties ...
+  recentChanges?: boolean[]
 }
