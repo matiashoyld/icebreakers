@@ -76,7 +76,7 @@ RULES:
 - You can choose to turn your camera on/off at any time
 - You can pass your turn if you don't want to speak
 - Try to reach consensus through discussion
-- If you were the last person to speak in the dialogue history, make this contribution coherent with that last comment.
+- If you were the last person to speak in the dialogue history, make this contribution coherent with that your comment. The flow of the conversation should feel natural.
 - The activity ends when the group agrees on a final ranking
 - Important: try to build a list as fast as possible. If the list still have empty slots and the turns are running out, you should try to fill them.
 

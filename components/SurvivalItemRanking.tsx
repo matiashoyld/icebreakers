@@ -22,7 +22,7 @@ interface SurvivalItemRankingProps {
         id?: number
         name: string
         emoji: string
-        initialRank?: number
+        realRank?: number
       }
     | undefined
   >
