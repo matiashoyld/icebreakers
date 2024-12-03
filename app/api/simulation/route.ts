@@ -1,5 +1,6 @@
 import { generatePrompt } from '@/lib/llm/openai'
 import { extractFirstJsonDict } from '@/lib/utils/json-parsers'
+import { countWords, estimateTokens } from '@/lib/utils/text-utils'
 import { NextResponse } from 'next/server'
 import OpenAI from 'openai'
 
@@ -40,6 +41,8 @@ export async function POST(request: Request) {
     console.log('\nGenerated Prompt:')
     console.log('---START PROMPT---')
     console.log(filledPrompt)
+    console.log(`Word count: ${countWords(filledPrompt)}`)
+    console.log(`Estimated tokens: ${estimateTokens(filledPrompt)}`)
     console.log('---END PROMPT---')
 
     console.log('Filled prompt:', filledPrompt)

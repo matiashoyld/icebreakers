@@ -2,6 +2,7 @@ import OpenAI from 'openai'
 import { generatePrompt } from './openai'
 import { interestScorePrompt } from './prompts/prompts'
 import { Participant, InterestScoreResponse, ParticipantInterestScore, SimulationStep } from '@/app/types/types'
+import { countWords, estimateTokens } from '@/lib/utils/text-utils'
 
 /**
  * Cleans a string that might contain a JSON object with markdown formatting
@@ -51,13 +52,15 @@ export async function calculateInterestScores(
     console.log('\nGenerated Interest Score Prompt:')
     console.log('---START PROMPT---')
     console.log(prompt)
+    console.log(`Word count: ${countWords(prompt)}`)
+    console.log(`Estimated tokens: ${estimateTokens(prompt)}`)
     console.log('---END PROMPT---')
 
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'gpt-3.5-turbo',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.7,
-      max_tokens: 500
+      max_tokens: 2048  // Allow for larger responses while leaving room for the prompt
     })
 
     const responseContent = completion.choices[0].message?.content || '{}'

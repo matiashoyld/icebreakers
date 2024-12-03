@@ -1,6 +1,7 @@
 import { generatePrompt } from '@/lib/llm/openai'
 import { satisfactionScorePrompt } from '@/lib/llm/prompts/prompts'
 import { extractFirstJsonDict } from '@/lib/utils/json-parsers'
+import { countWords, estimateTokens } from '@/lib/utils/text-utils'
 import { NextResponse } from 'next/server'
 import OpenAI from 'openai'
 
@@ -39,6 +40,8 @@ async function calculateSatisfactionScore(
   console.log('\nGenerated Prompt:')
   console.log('---START PROMPT---')
   console.log(filledPrompt)
+  console.log(`Word count: ${countWords(filledPrompt)}`)
+  console.log(`Estimated tokens: ${estimateTokens(filledPrompt)}`)
   console.log('---END PROMPT---')
 
   const response = await openai.chat.completions.create({
