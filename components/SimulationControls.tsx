@@ -2,7 +2,7 @@ import { MAX_SIMULATION_TURNS } from '@/app/constants/constants'
 import { Scenario } from '@/components/ScenarioSelector'
 import { Button } from '@/components/ui/button'
 import { SimulationTurn } from '@/lib/services/simulation-service'
-import { Loader2, Pause, Play, Save, SkipForward } from 'lucide-react'
+import { Loader2, Pause, Play, SkipForward, Square } from 'lucide-react'
 
 interface SimulationControlsProps {
   onNextStep: () => void
@@ -12,7 +12,7 @@ interface SimulationControlsProps {
   isPlaying: boolean
   hasStarted: boolean
   currentStep: number
-  loadingButton: 'next' | 'play' | 'save' | null
+  loadingButton: 'next' | 'play' | 'end' | null
   simulationTurns: SimulationTurn[]
   selectedScenario: Scenario | null
 }
@@ -94,21 +94,19 @@ export function SimulationControls({
 
       <Button
         onClick={onEndSimulation}
-        disabled={
-          isLoading || !hasStarted || simulationTurns.length === 0 || isPlaying
-        }
+        disabled={isLoading || !hasStarted || simulationTurns.length === 0}
         variant='ghost'
         className='w-28 h-9'
       >
-        {loadingButton === 'save' ? (
+        {loadingButton === 'end' ? (
           <>
             <Loader2 className='mr-2 h-4 w-4 animate-spin' />
             Wait...
           </>
         ) : (
           <>
-            <Save className='mr-2 h-4 w-4' />
-            Save
+            <Square className='mr-2 h-4 w-4' />
+            End
           </>
         )}
       </Button>

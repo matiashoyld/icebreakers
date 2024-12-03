@@ -20,6 +20,7 @@ import { MessageItem } from '@/components/Message'
 import { ParticipantVideo } from '@/components/ParticipantVideo'
 import { ScenarioSelector, type Scenario } from '@/components/ScenarioSelector'
 import { SimulationControls } from '@/components/SimulationControls'
+import { SimulationSummaryDialog } from '@/components/SimulationSummaryDialog'
 import { SurvivalItemRanking } from '@/components/SurvivalItemRanking'
 import { Toaster } from '@/components/ui/toaster'
 
@@ -75,7 +76,7 @@ export default function BreakoutRoomSimulator() {
 
   // Add this with other state variables at the top
   const [loadingButton, setLoadingButton] = useState<
-    'next' | 'play' | 'save' | null
+    'next' | 'play' | 'end' | null
   >(null)
 
   const [selectedScenario, setSelectedScenario] = useState<Scenario | null>(
@@ -84,6 +85,10 @@ export default function BreakoutRoomSimulator() {
 
   // Add this state to track if a step is in progress
   const [isStepInProgress, setIsStepInProgress] = useState(false)
+
+  const [isEndDialogOpen, setIsEndDialogOpen] = useState(false)
+  const [recentChanges, setRecentChanges] = useState<boolean[]>([])
+  const [simulationEnded, setSimulationEnded] = useState(false)
 
   const { toast } = useToast()
 
@@ -95,9 +100,49 @@ export default function BreakoutRoomSimulator() {
     return participantData[0]?.engagement ?? 0
   }
 
-  // Modify handleNextStep to handle ranking changes
+  // Add this function to handle saving simulation data
+  const saveSimulationData = useCallback(async () => {
+    try {
+      setLoadingButton('end')
+
+      const response = await fetch('/api/simulations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          simulationType: selectedScenario!.id,
+          participants,
+          turns: simulationTurns,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to save simulation')
+      }
+
+      const { id } = await response.json()
+
+      toast({
+        title: 'Simulation Saved',
+        description: `Simulation #${id} has been saved successfully.`,
+        className: 'border-[0.5px] border-black bg-white',
+      })
+    } catch (error) {
+      console.error('Error saving simulation:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to save simulation. Please try again.',
+        variant: 'destructive',
+      })
+    } finally {
+      setLoadingButton(null)
+    }
+  }, [participants, selectedScenario, simulationTurns, toast])
+
+  // Modify handleNextStep to save data when simulation ends
   const handleNextStep = useCallback(async () => {
-    if (isLoading || isStepInProgress) return
+    if (isLoading || isStepInProgress || simulationEnded) return
 
     setIsLoading(true)
     setLoadingButton('next')
@@ -113,19 +158,40 @@ export default function BreakoutRoomSimulator() {
       }
 
       // Get next step from LLM with interest-based participant selection
-      const { step, nextParticipantId } = await getNextSimulationStep({
-        participants,
-        currentTurn: currentStep,
-        dialogueHistory,
-        currentRanking: itemRanking
-          .map((item) =>
-            item
-              ? { ...item, initialRank: itemRanking.indexOf(item) + 1 }
-              : null
-          )
-          .filter((item): item is (typeof salvageItems)[0] => item !== null),
-        scenario: selectedScenario!,
-      })
+      const { step, nextParticipantId, endCondition } =
+        await getNextSimulationStep({
+          participants,
+          currentTurn: currentStep,
+          dialogueHistory,
+          currentRanking: itemRanking
+            .map((item) =>
+              item
+                ? {
+                    ...item,
+                    realRank: itemRanking.indexOf(item) + 1,
+                  }
+                : null
+            )
+            .filter((item): item is (typeof salvageItems)[0] => item !== null),
+          scenario: selectedScenario!,
+          recentChanges,
+        })
+
+      // Update recent changes
+      const hadChanges = step.rankingChanges && step.rankingChanges.length > 0
+      setRecentChanges((prev) =>
+        [...prev, hadChanges]
+          .slice(-4)
+          .filter((change): change is boolean => change !== undefined)
+      )
+
+      // Handle simulation end
+      if (endCondition.ended) {
+        setSimulationEnded(true)
+        setIsEndDialogOpen(true)
+        setIsPlaying(false)
+        await saveSimulationData() // Save data when simulation ends naturally
+      }
 
       // Process any ranking changes requested by the agent
       if (step.rankingChanges && step.rankingChanges.length > 0) {
@@ -174,7 +240,7 @@ export default function BreakoutRoomSimulator() {
             id: salvageItems.find((i) => i.name === change.item.name)?.id || 0,
             name: change.item.name,
             emoji: change.item.emoji,
-            initialRank: change.toRank,
+            realRank: change.toRank,
           }
         })
         setItemRanking(newRanking)
@@ -286,6 +352,9 @@ export default function BreakoutRoomSimulator() {
     hasStarted,
     itemRanking,
     isStepInProgress,
+    recentChanges,
+    simulationEnded,
+    saveSimulationData,
   ])
 
   // Modify handlePlayPauseSimulation function
@@ -344,48 +413,13 @@ export default function BreakoutRoomSimulator() {
     }
   }, [messages])
 
-  // Add function to end and save simulation
-  const handleEndSimulation = async () => {
-    setLoadingButton('save')
-    try {
-      if (!selectedScenario) {
-        throw new Error('No scenario selected')
-      }
-
-      const response = await fetch('/api/simulations', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          participants,
-          turns: simulationTurns,
-          simulationType: selectedScenario.id,
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to save simulation')
-      }
-
-      const { id } = await response.json()
-
-      toast({
-        title: 'Simulation Saved',
-        description: `Simulation #${id} has been saved successfully.`,
-        className: 'border-[0.5px] border-black bg-white',
-      })
-    } catch (error) {
-      console.error('Error saving simulation:', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to save simulation. Please try again.',
-        variant: 'destructive',
-      })
-    } finally {
-      setLoadingButton(null)
-    }
-  }
+  // Replace handleEndSimulation with this new version
+  const handleEndSimulation = useCallback(async () => {
+    setIsPlaying(false)
+    setSimulationEnded(true)
+    setIsEndDialogOpen(true)
+    await saveSimulationData()
+  }, [saveSimulationData])
 
   return (
     <div className='h-screen p-6'>
@@ -488,6 +522,41 @@ export default function BreakoutRoomSimulator() {
           </CardContent>
         </Card>
       </div>
+      <SimulationSummaryDialog
+        isOpen={isEndDialogOpen}
+        onClose={() => setIsEndDialogOpen(false)}
+        participants={participants}
+        finalRanking={Array(15)
+          .fill(null)
+          .map((_, index) => {
+            // First, check if there's an item actually ranked at this position
+            const itemAtPosition = itemRanking[index]
+
+            if (itemAtPosition) {
+              // If there's a ranked item at this position, show it with its real rank
+              return {
+                name: itemAtPosition.name,
+                emoji: itemAtPosition.emoji,
+                rank: index + 1,
+                realRank:
+                  salvageItems.findIndex(
+                    (i) => i.name === itemAtPosition.name
+                  ) + 1,
+              }
+            }
+
+            // For unranked positions, show the item that should be there according to real ranking
+            const correctItem = salvageItems[index]
+            return {
+              name: correctItem.name,
+              emoji: correctItem.emoji,
+              rank: 0, // Use 0 instead of '-' to match the type
+              realRank: index + 1,
+            }
+          })}
+        totalTurns={currentStep}
+        totalScore={100 - currentStep * 2}
+      />
       <Toaster />
     </div>
   )

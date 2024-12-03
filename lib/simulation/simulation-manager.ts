@@ -1,3 +1,4 @@
+import { MAX_SIMULATION_TURNS } from '@/app/constants/constants'
 import { salvageItems } from '@/app/data/data'
 import { Participant, SimulationStep } from '@/app/types/types'
 import { selectNextParticipant } from '@/lib/llm/interestScore'
@@ -23,6 +24,12 @@ interface SimulationInput {
   scenario: {
     id: 'baseline' | 'leadership' | 'social' | 'gamification'
   }
+  recentChanges?: boolean[]
+}
+
+export type SimulationEndCondition = {
+  ended: boolean
+  reason: 'max_turns' | 'no_changes' | null
 }
 
 function formatParticipantInfo(participant: Participant): string {
@@ -53,9 +60,28 @@ ${otherParticipants
   .join('\n\n')}`
 }
 
-export async function getNextSimulationStep(
-  input: SimulationInput
-): Promise<{ step: SimulationStep; nextParticipantId: number }> {
+function checkSimulationEnd(
+  currentTurn: number,
+  recentChanges: boolean[]
+): SimulationEndCondition {
+  // Check max turns
+  if (currentTurn >= MAX_SIMULATION_TURNS) {
+    return { ended: true, reason: 'max_turns' }
+  }
+
+  // Check for 4 consecutive turns without changes
+  if (recentChanges.length >= 4 && recentChanges.every((change) => !change)) {
+    return { ended: true, reason: 'no_changes' }
+  }
+
+  return { ended: false, reason: null }
+}
+
+export async function getNextSimulationStep(input: SimulationInput): Promise<{
+  step: SimulationStep
+  nextParticipantId: number
+  endCondition: SimulationEndCondition
+}> {
   // Calculate interest scores using the API endpoint
   const interestScoreResponse = await fetch('/api/interest-scores', {
     method: 'POST',
@@ -118,7 +144,7 @@ export async function getNextSimulationStep(
       .fill(null)
       .map((_, index) => {
         const item = input.currentRanking.find(
-          (rankItem) => rankItem.initialRank === index + 1
+          (rankItem) => rankItem.realRank === index + 1
         )
         return `${index + 1}. ${item ? item.name : '-'}`
       })
@@ -188,7 +214,22 @@ ${unrankedItems.length > 0 ? `Still not ranked:\n${unrankedItems}` : ''}`
     rankingChanges: responseData.rankingChanges,
   }
 
-  return { step, nextParticipantId }
+  // Track if this turn had any ranking changes
+  const hadChanges = step.rankingChanges && step.rankingChanges.length > 0
+
+  // Get the last 4 turns' changes (including this one)
+  const recentChanges = [...(input.recentChanges || []), hadChanges]
+    .slice(-4)
+    .filter((change): change is boolean => change !== undefined)
+
+  // Check end conditions
+  const endCondition = checkSimulationEnd(input.currentTurn + 1, recentChanges)
+
+  return {
+    step,
+    nextParticipantId,
+    endCondition,
+  }
 }
 
 const leaderMap = new Map<string, number>()
