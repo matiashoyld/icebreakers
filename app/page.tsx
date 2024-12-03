@@ -90,6 +90,12 @@ export default function BreakoutRoomSimulator() {
   const [recentChanges, setRecentChanges] = useState<boolean[]>([])
   const [simulationEnded, setSimulationEnded] = useState(false)
 
+  const [satisfactionScores, setSatisfactionScores] = useState<{
+    participantId: number;
+    score: number;
+    explanation: string;
+  }[]>([]);
+
   const { toast } = useToast()
 
   // Function to get the latest engagement score for a participant
@@ -124,7 +130,10 @@ export default function BreakoutRoomSimulator() {
 
   // Add this function to handle saving simulation data
   const saveSimulationData = useCallback(
-    async (taskScore: number) => {
+    async (
+      taskScore: number,
+      satisfactionScores: { participantId: number; score: number; explanation: string }[]
+    ) => {
       try {
         setLoadingButton('end')
 
@@ -138,6 +147,7 @@ export default function BreakoutRoomSimulator() {
             participants,
             turns: simulationTurns,
             taskScore,
+            satisfactionScores,
           }),
         })
 
@@ -163,8 +173,37 @@ export default function BreakoutRoomSimulator() {
         setLoadingButton(null)
       }
     },
-    [participants, selectedScenario, simulationTurns, itemRanking, toast]
+    [participants, selectedScenario, simulationTurns, toast]
   )
+
+  // Add this function to collect satisfaction scores
+  const collectSatisfactionScores = useCallback(async () => {
+    const participantsWithInfo = participants.map(participant => ({
+      participantId: participant.id,
+      agentDescription: `Name: ${participant.name}
+        Speaking style: ${participant.speakingStyle}
+        Agent description: ${participant.agentDescription}`
+    }));
+
+    const response = await fetch('/api/satisfaction-scores', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        participants: participantsWithInfo,
+        conversationHistory: dialogueHistory.join('\n'),
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to get satisfaction scores');
+    }
+
+    const scores = await response.json();
+    setSatisfactionScores(scores);
+    return scores;
+  }, [participants, dialogueHistory]);
 
   // Modify handleNextStep to use calculateTaskScore
   const handleNextStep = useCallback(async () => {
@@ -214,10 +253,11 @@ export default function BreakoutRoomSimulator() {
       // Handle simulation end
       if (endCondition.ended) {
         setSimulationEnded(true)
-        setIsEndDialogOpen(true)
         setIsPlaying(false)
         const score = calculateTaskScore()
-        await saveSimulationData(score) // Use calculated score
+        const satisfactionScores = await collectSatisfactionScores()
+        await saveSimulationData(score, satisfactionScores)
+        setIsEndDialogOpen(true)
       }
 
       // Process any ranking changes requested by the agent
@@ -383,6 +423,7 @@ export default function BreakoutRoomSimulator() {
     simulationEnded,
     saveSimulationData,
     calculateTaskScore,
+    collectSatisfactionScores,
   ])
 
   // Modify handlePlayPauseSimulation function
@@ -447,8 +488,9 @@ export default function BreakoutRoomSimulator() {
     setSimulationEnded(true)
     setIsEndDialogOpen(true)
     const score = calculateTaskScore()
-    await saveSimulationData(score)
-  }, [calculateTaskScore, saveSimulationData])
+    const satisfactionScores = await collectSatisfactionScores()
+    await saveSimulationData(score, satisfactionScores)
+  }, [calculateTaskScore, saveSimulationData, collectSatisfactionScores])
 
   return (
     <div className='h-screen p-6'>
@@ -583,6 +625,7 @@ export default function BreakoutRoomSimulator() {
           })}
         totalTurns={currentStep}
         simulationType={selectedScenario?.id || 'baseline'}
+        satisfactionScores={satisfactionScores}
       />
       <Toaster />
     </div>

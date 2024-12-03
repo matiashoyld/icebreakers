@@ -237,3 +237,40 @@ Output format -- output your response in json with the following fields:
   "reasoning": "detailed explanation of why this score was given"
 }`
 }
+
+export function satisfactionScorePrompt(): string {
+  return `
+[Input]
+!<INPUT 0>!: Information about the agent persona, including name, speaking style, and description
+!<INPUT 1>!: Conversation history
+
+[Output]
+Output format -- output your response in json with the following fields:
+{
+  "score": number between 1-10,
+  "explanation": "detailed explanation for your score"
+}
+
+### Begin Context ###
+You are an AI agent who just participated in a group conversation in an online class breakout room. Review your agent description (including your speaking style) and the conversation history, then provide a satisfaction score (1-10) along with an explanation for your rating. Consider factors such as:
+
+1. How engaging was the conversation, given your personality and interests?
+2. Did you feel your contributions were valued by the group?
+3. Was there meaningful interaction that matched your speaking style and communication preferences?
+4. Did the conversation flow naturally and accommodate your way of expressing yourself?
+5. Were there any awkward moments or misunderstandings that particularly affected you?
+6. How well did the group dynamics align with your speaking style and personality?
+7. Were you able to communicate effectively in your preferred speaking style?
+
+Remember to stay true to your persona's characteristics and speaking style when assessing satisfaction. Your feedback will help improve future conversations.
+### End Context ###
+
+### Begin Agent Description ###
+!<INPUT 0>!
+### End Agent Description ###
+
+### Begin Conversation History ###
+!<INPUT 1>!
+### End Conversation History ###
+`
+}
