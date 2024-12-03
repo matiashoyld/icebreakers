@@ -185,6 +185,26 @@ export default function BreakoutRoomSimulator() {
         Agent description: ${participant.agentDescription}`
     }));
 
+    // Calculate final ranking from itemRanking
+    const currentRanking = itemRanking
+      .map((item, index) => {
+        if (!item) return null;
+        return {
+          name: item.name,
+          rank: index + 1
+        };
+      })
+      .filter((item): item is { name: string; rank: number } => item !== null)
+      .sort((a, b) => a.rank - b.rank)
+      .map((item) => `${item.rank}. ${item.name}`)
+      .join('\n');
+
+    // Format the expert ranking as a string
+    const expertRanking = [...salvageItems]
+      .sort((a, b) => a.realRank - b.realRank)
+      .map((item) => `${item.realRank}. ${item.name}`)
+      .join('\n');
+
     const response = await fetch('/api/satisfaction-scores', {
       method: 'POST',
       headers: {
@@ -193,6 +213,8 @@ export default function BreakoutRoomSimulator() {
       body: JSON.stringify({
         participants: participantsWithInfo,
         conversationHistory: dialogueHistory.join('\n'),
+        finalRanking: currentRanking,
+        expertRanking: expertRanking,
       }),
     });
 
@@ -203,7 +225,7 @@ export default function BreakoutRoomSimulator() {
     const scores = await response.json();
     setSatisfactionScores(scores);
     return scores;
-  }, [participants, dialogueHistory]);
+  }, [participants, dialogueHistory, itemRanking]);
 
   // Modify handleNextStep to use calculateTaskScore
   const handleNextStep = useCallback(async () => {
@@ -311,7 +333,6 @@ export default function BreakoutRoomSimulator() {
           }
         })
         setItemRanking(newRanking)
-
         setProposedChanges(changes)
       } else {
         setProposedChanges([])

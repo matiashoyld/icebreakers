@@ -25,12 +25,14 @@ async function calculateSatisfactionScore(
     agentDescription: string
   },
   conversationHistory: string,
+  finalRanking: string,
+  expertRanking: string,
   openai: OpenAI
 ) {
   console.log(`\nProcessing Participant ${participant.participantId}:`)
     
   const filledPrompt = await generatePrompt(
-    [participant.agentDescription, conversationHistory],
+    [participant.agentDescription, conversationHistory, finalRanking, expertRanking],
     satisfactionScorePrompt()
   )
   
@@ -76,18 +78,26 @@ export async function POST(request: Request) {
     
     const openai = await getOpenAIClient()
     const body = await request.json()
-    const { participants, conversationHistory } = body as {
+    const { participants, conversationHistory, finalRanking, expertRanking } = body as {
       participants: Array<{
         participantId: number
         agentDescription: string
       }>
       conversationHistory: string
+      finalRanking: string
+      expertRanking: string
     }
 
     // Calculate all satisfaction scores in parallel
     const scores = await Promise.all(
       participants.map((participant) =>
-        calculateSatisfactionScore(participant, conversationHistory, openai)
+        calculateSatisfactionScore(
+          participant, 
+          conversationHistory, 
+          finalRanking,
+          expertRanking,
+          openai
+        )
       )
     )
 

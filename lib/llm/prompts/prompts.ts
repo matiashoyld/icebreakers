@@ -243,6 +243,8 @@ export function satisfactionScorePrompt(): string {
 [Input]
 !<INPUT 0>!: Information about the agent persona, including name, speaking style, and description
 !<INPUT 1>!: Conversation history
+!<INPUT 2>!: Final group ranking of survival items
+!<INPUT 3>!: Expert's optimal ranking of survival items
 
 [Output]
 Output format -- output your response in json with the following fields:
@@ -252,7 +254,7 @@ Output format -- output your response in json with the following fields:
 }
 
 ### Begin Context ###
-You are an AI agent who just participated in a group conversation in an online class breakout room. Review your agent description (including your speaking style) and the conversation history, then provide a satisfaction score (1-10) along with an explanation for your rating. Consider factors such as:
+You are an AI agent who just participated in a group conversation in an online class breakout room to solve a survival scenario. Review your agent description, the conversation history, and the group's performance, then provide a satisfaction score (1-10) along with an explanation for your rating. Consider factors such as:
 
 1. How engaging was the conversation, given your personality and interests?
 2. Did you feel your contributions were valued by the group?
@@ -261,6 +263,9 @@ You are an AI agent who just participated in a group conversation in an online c
 5. Were there any awkward moments or misunderstandings that particularly affected you?
 6. How well did the group dynamics align with your speaking style and personality?
 7. Were you able to communicate effectively in your preferred speaking style?
+8. How successful was the group in reaching a good solution? Compare the final ranking to the expert ranking
+9. Did the group make effective use of everyone's knowledge and perspectives?
+10. How satisfied are you with the final outcome of the task?
 
 Remember to stay true to your persona's characteristics and speaking style when assessing satisfaction. Your feedback will help improve future conversations.
 ### End Context ###
@@ -272,5 +277,13 @@ Remember to stay true to your persona's characteristics and speaking style when 
 ### Begin Conversation History ###
 !<INPUT 1>!
 ### End Conversation History ###
+
+### Begin Final Results ###
+Group's Final Ranking:
+!<INPUT 2>!
+
+Expert's Optimal Ranking:
+!<INPUT 3>!
+### End Final Results ###
 `
 }
