@@ -1,30 +1,20 @@
-import dotenv from 'dotenv';		
-
-dotenv.config();
+import OpenAI from 'openai'
 
 export async function callLLM(prompt: string): Promise<{ score: number }> {
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = process.env.OPENAI_API_KEY
 
-  if (!apiKey) {
-    throw new Error('API key is not set in the environment');
-  }
+  const openai = new OpenAI({
+    apiKey: apiKey,
+  })
 
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: 'gpt-4', // Specify the model you want to use
-      messages: [{ role: 'user', content: prompt }],
-    }),
-  });
+  const response = await openai.chat.completions.create({
+    model: 'gpt-4o-mini',
+    messages: [{ role: 'user', content: prompt }],
+    max_tokens: 4096,
+    temperature: 0.7,
+  })
 
-  if (!response.ok) {
-    throw new Error('Failed to call LLM API');
-  }
+  const output = response.choices[0].message.content || ''
 
-  const data = await response.json();
-  return { score: data.choices[0].message.content }; // Adjust according to your API response structure 
+  return { score: parseFloat(output) || 0 } // Convert string to number, default to 0 if parsing fails
 }
