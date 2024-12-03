@@ -43,11 +43,6 @@ type SimulationSummaryDialogProps = {
   simulationType: 'baseline' | 'leadership' | 'social' | 'gamification'
 }
 
-type SalvageItem = {
-  name: string
-  emoji: string
-}
-
 function getTypeStyles(
   type: 'baseline' | 'leadership' | 'social' | 'gamification'
 ): string {

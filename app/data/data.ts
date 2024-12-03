@@ -13,6 +13,7 @@ export const initialParticipants: Participant[] = [
     timesDoingNothing: 0,
     cameraToggles: 0,
     participationRate: 0,
+    numberOfInteractions: 0,
     speakingStyle:
       'Friendly and collaborative, often asking questions to engage others',
     agentDescription:
@@ -27,6 +28,7 @@ export const initialParticipants: Participant[] = [
     timesDoingNothing: 0,
     cameraToggles: 0,
     participationRate: 0,
+    numberOfInteractions: 0,
     speakingStyle: 'Direct and analytical, focuses on practical solutions',
     agentDescription:
       'A pragmatic problem-solver who helps keep discussions on track',
@@ -40,6 +42,7 @@ export const initialParticipants: Participant[] = [
     timesDoingNothing: 0,
     cameraToggles: 0,
     participationRate: 0,
+    numberOfInteractions: 0,
     speakingStyle: 'Creative and enthusiastic, brings new perspectives',
     agentDescription:
       'An innovative thinker who excels at generating unique ideas',
@@ -53,6 +56,7 @@ export const initialParticipants: Participant[] = [
     timesDoingNothing: 0,
     cameraToggles: 0,
     participationRate: 0,
+    numberOfInteractions: 0,
     speakingStyle: 'Diplomatic and detail-oriented, helps build consensus',
     agentDescription:
       'A mediator who excels at finding common ground and synthesizing ideas',
