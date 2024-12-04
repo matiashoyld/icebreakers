@@ -237,27 +237,3 @@ Output format -- output your response in json with the following fields:
   "reasoning": "detailed explanation of why this score was given"
 }`
 }
-
-export async function evaluateQualityOfContributions(agentResponse: string): Promise<number> {
-  const context = {}; // Define the context as needed
-  const prompt = evaluateQualityOfContributionPrompt(agentResponse, context);
-  
-  const response = await fetch('/api/evaluate-quality', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ prompt }),
-  });
-
-  if (!response.ok) {
-    throw new Error('Failed to evaluate quality of contribution');
-  }
-
-  const { qualityScore } = await response.json();
-  return qualityScore;
-}
-
-export function evaluateQualityOfContributionPrompt(agentResponse: string, context: any): string {
-  return `Evaluate the quality of the following contribution: "${agentResponse}". Provide a score from 0 to 100 based on the context: ${JSON.stringify(context)}`;
-}
