@@ -252,6 +252,8 @@ To determine your interest score, you should consider:
 5. Potential contributions based on their persona
 6. General interest in the topic and alignment with your personality and current context.
 7. How well the current scenario type aligns with your personality traits and preferences
+
+Important: don't be overly nice. Produce a realistic score based on the above factors. It can be a low score if you have nothing to contribute or you have already spoken a lot or your personality is not aligned with the current topic.
 ### End Instructions ###
 
 ### Begin Participant Description ###
