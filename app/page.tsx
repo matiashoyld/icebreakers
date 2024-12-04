@@ -1,9 +1,9 @@
 'use client'
 
-import { useToast } from '@/hooks/use-toast'
-import { useCallback, useEffect, useRef, useState } from 'react'
 import { SimulationDashboard } from '@/components/SimulationDashboard'
+import { useToast } from '@/hooks/use-toast'
 import { useSimulationMetrics } from '@/hooks/useSimulationMetrics'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 // UI Components
 import {
@@ -27,12 +27,15 @@ import { SurvivalItemRanking } from '@/components/SurvivalItemRanking'
 import { Toaster } from '@/components/ui/toaster'
 
 // Data, Types, and Constants
-import {
-  ENGAGEMENT_CHART_COLOR,
-  getEngagementScore,
-} from '@/app/constants/constants'
+import { ENGAGEMENT_CHART_COLOR } from '@/app/constants/constants'
 import { initialParticipants, salvageItems } from '@/app/data/data'
-import { EngagementData, Message, Participant } from '@/app/types/types'
+import {
+  EngagementData,
+  Message,
+  Participant,
+  SimulationStep,
+} from '@/app/types/types'
+import { evaluateQualityOfContribution } from '@/lib/services/simulation-service' // Import the function
 import { getNextSimulationStep } from '@/lib/simulation/simulation-manager'
 
 type Change = {
@@ -92,17 +95,36 @@ export default function BreakoutRoomSimulator() {
   const [recentChanges, setRecentChanges] = useState<boolean[]>([])
   const [simulationEnded, setSimulationEnded] = useState(false)
 
+<<<<<<< HEAD
+=======
+  const [satisfactionScores, setSatisfactionScores] = useState<
+    {
+      participantId: number
+      score: number
+      explanation: string
+    }[]
+  >([])
+
+>>>>>>> 61273a29fd91424f842dd617f84cca7454ac0466
   const { toast } = useToast()
 
   // Use the custom hook to get metrics
   const { stepMetrics, overallMetrics } = useSimulationMetrics(simulationTurns)
 
-  // Function to get the latest engagement score for a participant
+  // Replace the existing engagementData state with interestScores
+  const [interestScores, setInterestScores] = useState<
+    {
+      participantId: number
+      score: number
+    }[]
+  >([])
+
+  // Update the getLatestEngagement function
   const getLatestEngagement = (participantId: number) => {
-    const participantData = engagementData
-      .filter((data) => data.agentId === participantId)
-      .sort((a, b) => b.turn - a.turn)
-    return participantData[0]?.engagement ?? 0
+    const participantScore = interestScores.find(
+      (score) => score.participantId === participantId
+    )
+    return participantScore?.score ?? 0
   }
 
   // Add a function to calculate the task score consistently
@@ -129,7 +151,18 @@ export default function BreakoutRoomSimulator() {
 
   // Add this function to handle saving simulation data
   const saveSimulationData = useCallback(
+<<<<<<< HEAD
     async (taskScore: number) => {
+=======
+    async (
+      taskScore: number,
+      satisfactionScores: {
+        participantId: number
+        score: number
+        explanation: string
+      }[]
+    ) => {
+>>>>>>> 61273a29fd91424f842dd617f84cca7454ac0466
       try {
         setLoadingButton('end')
 
@@ -171,7 +204,65 @@ export default function BreakoutRoomSimulator() {
     [participants, selectedScenario, simulationTurns, itemRanking, toast]
   )
 
+<<<<<<< HEAD
   // Modify handleNextStep to use calculateTaskScore
+=======
+  // Add this function to collect satisfaction scores
+  const collectSatisfactionScores = useCallback(async () => {
+    const participantsWithInfo = participants.map((participant) => ({
+      participantId: participant.id,
+      agentDescription: `Name: ${participant.name}
+        Speaking style: ${participant.speakingStyle}
+        Agent description: ${participant.agentDescription}`,
+    }))
+
+    // Calculate final ranking from itemRanking
+    const currentRanking = itemRanking
+      .map((item, index) => {
+        if (!item) return null
+        return {
+          name: item.name,
+          rank: index + 1,
+        }
+      })
+      .filter((item): item is { name: string; rank: number } => item !== null)
+      .sort((a, b) => a.rank - b.rank)
+      .map((item) => `${item.rank}. ${item.name}`)
+      .join('\n')
+
+    // Format the expert ranking as a string
+    const expertRanking = [...salvageItems]
+      .sort((a, b) => a.realRank - b.realRank)
+      .map((item) => `${item.realRank}. ${item.name}`)
+      .join('\n')
+
+    const response = await fetch('/api/satisfaction-scores', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        participants: participantsWithInfo,
+        conversationHistory: dialogueHistory.join('\n'),
+        finalRanking: currentRanking,
+        expertRanking: expertRanking,
+      }),
+    })
+
+    if (!response.ok) {
+      throw new Error('Failed to get satisfaction scores')
+    }
+
+    const scores = await response.json()
+    setSatisfactionScores(scores)
+    return scores
+  }, [participants, dialogueHistory, itemRanking])
+
+  // Add simulationSteps state
+  const [simulationSteps, setSimulationSteps] = useState<SimulationStep[]>([])
+
+  // Modify handleNextStep to store interest scores
+>>>>>>> 61273a29fd91424f842dd617f84cca7454ac0466
   const handleNextStep = useCallback(async () => {
     if (isLoading || isStepInProgress || simulationEnded) return
 
@@ -189,11 +280,12 @@ export default function BreakoutRoomSimulator() {
       }
 
       // Get next step from LLM with interest-based participant selection
-      const { step, nextParticipantId, endCondition } =
+      const { step, nextParticipantId, endCondition, interestScores } =
         await getNextSimulationStep({
           participants,
           currentTurn: currentStep,
           dialogueHistory,
+          conversationHistory: simulationSteps,
           currentRanking: itemRanking
             .map((item) =>
               item
@@ -207,6 +299,9 @@ export default function BreakoutRoomSimulator() {
           scenario: selectedScenario!,
           recentChanges,
         })
+
+      // Store the interest scores
+      setInterestScores(interestScores)
 
       // Update recent changes
       const hadChanges = step.rankingChanges && step.rankingChanges.length > 0
@@ -331,18 +426,8 @@ export default function BreakoutRoomSimulator() {
         `${step.action}${step.message ? `: "${step.message}"` : ''}`
       )
 
-      // Update engagement data
-      const newEngagement = getEngagementScore()
-      setEngagementData((prevData) => [
-        ...prevData,
-        {
-          turn: currentStep + 1,
-          engagement: newEngagement,
-          agentId: nextParticipantId,
-        },
-      ])
-
       // Store turn data
+<<<<<<< HEAD
       setSimulationTurns((prev) => [
         ...prev,
         {
@@ -359,9 +444,49 @@ export default function BreakoutRoomSimulator() {
           prompt: step.prompt || '',
         },
       ])
+=======
+      const newTurn = {
+        turnNumber: currentStep + 1,
+        participantId: nextParticipantId,
+        action: step.action,
+        message: step.message,
+        thinking: step.thinking || '',
+        decision: step.action,
+        engagementScore:
+          interestScores.find(
+            (score) => score.participantId === nextParticipantId
+          )?.score ?? 0,
+        cameraStatus:
+          participants.find((p) => p.id === nextParticipantId)?.cameraOn ||
+          false,
+        prompt: step.prompt || '',
+      }
+
+      setSimulationTurns((prev) => [...prev, newTurn])
+
+      // Evaluate quality of contribution
+      const qualityScore = await evaluateQualityOfContribution(step.message, {
+        dialogueHistory,
+        currentRanking: itemRanking,
+        currentTurn: currentStep + 1,
+      })
+
+      // Update the turn with quality score
+      setSimulationTurns((prev) => {
+        const updatedTurns = [...prev]
+        updatedTurns[updatedTurns.length - 1] = {
+          ...newTurn,
+          qualityOfContributions: qualityScore, // Add quality score to the turn
+        }
+        return updatedTurns
+      })
+>>>>>>> 61273a29fd91424f842dd617f84cca7454ac0466
 
       // Increment step
       setCurrentStep((prev) => prev + 1)
+
+      // Add the step to simulation steps
+      setSimulationSteps((prev) => [...prev, step])
     } catch (error) {
       console.error('Error in simulation step:', error)
       alert(
@@ -388,6 +513,11 @@ export default function BreakoutRoomSimulator() {
     simulationEnded,
     saveSimulationData,
     calculateTaskScore,
+<<<<<<< HEAD
+=======
+    collectSatisfactionScores,
+    simulationSteps,
+>>>>>>> 61273a29fd91424f842dd617f84cca7454ac0466
   ])
 
   // Modify handlePlayPauseSimulation function
@@ -552,7 +682,6 @@ export default function BreakoutRoomSimulator() {
               currentDecision={currentDecision}
               getLatestEngagement={getLatestEngagement}
               proposedChanges={proposedChanges}
-              engagementData={engagementData}
             />
           </CardContent>
         </Card>
@@ -590,7 +719,10 @@ export default function BreakoutRoomSimulator() {
         simulationType={selectedScenario?.id || 'baseline'}
       />
       <Toaster />
-      <SimulationDashboard stepMetrics={stepMetrics} overallMetrics={overallMetrics} />
+      <SimulationDashboard
+        stepMetrics={stepMetrics}
+        overallMetrics={overallMetrics}
+      />
     </div>
   )
 }

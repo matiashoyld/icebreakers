@@ -78,6 +78,7 @@ RULES:
 - Try to reach consensus through discussion
 - If you were the last person to speak in the dialogue history, make this contribution coherent with that your comment. The flow of the conversation should feel natural.
 - The activity ends when the group agrees on a final ranking
+- If you don't have any ideas for ranking changes, you can submit an empty list. After 4 turns that
 - Important: try to build a list as fast as possible. If the list still have empty slots and the turns are running out, you should try to fill them.
 
 Maintain your persona's characteristics throughout the discussion. Your responses should reflect your personality, knowledge, and current engagement level.
@@ -224,7 +225,7 @@ Your task is to analyze the current conversation state and determine an interest
 !<INPUT 4>!: Current turn number
 
 Consider these factors when determining the interest score:
-1. Time since last spoke (longer time = higher score)
+1. Time since last spoke (longer time = higher score). This is important, if you have spoken too many times recently, you should not be scored as highly. And if you haven't spoken recently, you should be scored more highly.
 2. Relevance of participant's expertise to current discussion
 3. Previous engagement level in conversation
 4. Whether they've been interrupted or had incomplete thoughts
@@ -237,3 +238,87 @@ Output format -- output your response in json with the following fields:
   "reasoning": "detailed explanation of why this score was given"
 }`
 }
+<<<<<<< HEAD
+=======
+
+export async function evaluateQualityOfContributions(
+  agentResponse: string
+): Promise<number> {
+  const context = {} // Define the context as needed
+  const prompt = evaluateQualityOfContributionPrompt(agentResponse, context)
+
+  const response = await fetch('/api/evaluate-quality', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ prompt }),
+  })
+
+  if (!response.ok) {
+    throw new Error('Failed to evaluate quality of contribution')
+  }
+
+  const { qualityScore } = await response.json()
+  return qualityScore
+}
+
+export function evaluateQualityOfContributionPrompt(
+  agentResponse: string,
+  context: any
+): string {
+  return `Evaluate the quality of the following contribution: "${agentResponse}". Provide a score from 0 to 100 based on the context: ${JSON.stringify(
+    context
+  )}`
+}
+
+export function satisfactionScorePrompt(): string {
+  return `
+[Input]
+!<INPUT 0>!: Information about the agent persona, including name, speaking style, and description
+!<INPUT 1>!: Conversation history
+!<INPUT 2>!: Final group ranking of survival items
+!<INPUT 3>!: Expert's optimal ranking of survival items
+
+[Output]
+Output format -- output your response in json with the following fields:
+{
+  "score": number between 1-10,
+  "explanation": "detailed explanation for your score"
+}
+
+### Begin Context ###
+You are an AI agent who just participated in a group conversation in an online class breakout room to solve a survival scenario. Review your agent description, the conversation history, and the group's performance, then provide a satisfaction score (1-10) along with an explanation for your rating. Consider factors such as:
+
+1. How engaging was the conversation, given your personality and interests?
+2. Did you feel your contributions were valued by the group?
+3. Was there meaningful interaction that matched your speaking style and communication preferences?
+4. Did the conversation flow naturally and accommodate your way of expressing yourself?
+5. Were there any awkward moments or misunderstandings that particularly affected you?
+6. How well did the group dynamics align with your speaking style and personality?
+7. Were you able to communicate effectively in your preferred speaking style?
+8. How successful was the group in reaching a good solution? Compare the final ranking to the expert ranking
+9. Did the group make effective use of everyone's knowledge and perspectives?
+10. How satisfied are you with the final outcome of the task?
+
+Remember to stay true to your persona's characteristics and speaking style when assessing satisfaction. Your feedback will help improve future conversations.
+### End Context ###
+
+### Begin Agent Description ###
+!<INPUT 0>!
+### End Agent Description ###
+
+### Begin Conversation History ###
+!<INPUT 1>!
+### End Conversation History ###
+
+### Begin Final Results ###
+Group's Final Ranking:
+!<INPUT 2>!
+
+Expert's Optimal Ranking:
+!<INPUT 3>!
+### End Final Results ###
+`
+}
+>>>>>>> 61273a29fd91424f842dd617f84cca7454ac0466
