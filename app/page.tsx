@@ -680,6 +680,7 @@ export default function BreakoutRoomSimulator() {
         totalTurns={currentStep}
         simulationType={selectedScenario?.id || 'baseline'}
         satisfactionScores={satisfactionScores}
+        messages={messages}
       />
       <Toaster />
     </div>

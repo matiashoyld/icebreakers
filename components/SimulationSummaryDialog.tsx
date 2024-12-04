@@ -16,7 +16,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+import { MessageItem } from './Message'
 
 type Participant = {
   id: number
@@ -46,11 +51,14 @@ type SimulationSummaryDialogProps = {
     score: number
     explanation: string
   }[]
+  messages: {
+    id: number
+    content: string
+    participantId: number
+  }[]
 }
 
-function getTypeStyles(
-  type: string
-): string {
+function getTypeStyles(type: string): string {
   switch (type) {
     case 'baseline':
       return 'bg-zinc-100 text-zinc-800'
@@ -73,6 +81,7 @@ export function SimulationSummaryDialog({
   totalTurns,
   simulationType,
   satisfactionScores = [],
+  messages = [],
 }: SimulationSummaryDialogProps) {
   const averageWordsSpoken =
     participants.reduce((sum, p) => sum + p.wordsSpoken, 0) /
@@ -212,7 +221,11 @@ export function SimulationSummaryDialog({
                         <TableRow key={participant.id}>
                           <TableCell>
                             <Avatar>
-                              <AvatarImage src={`/agents/${participant.id}.png`} />
+                              <AvatarImage
+                                src={`/images/${participant.name.toLowerCase()}.gif`}
+                                alt={participant.name}
+                                className='object-cover'
+                              />
                               <AvatarFallback>
                                 {participant.name[0]}
                               </AvatarFallback>
@@ -229,12 +242,14 @@ export function SimulationSummaryDialog({
                             {satisfactionData ? (
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <span className="cursor-help">
+                                  <span className='cursor-help'>
                                     {satisfactionData.score}/10
                                   </span>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  <p className="max-w-xs">{satisfactionData.explanation}</p>
+                                  <p className='max-w-xs'>
+                                    {satisfactionData.explanation}
+                                  </p>
                                 </TooltipContent>
                               </Tooltip>
                             ) : (
@@ -282,6 +297,32 @@ export function SimulationSummaryDialog({
                     </TableRow>
                   </TableBody>
                 </Table>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Conversation History</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className='h-[300px]'>
+                  <div className='space-y-4'>
+                    {messages.map((message) => {
+                      const participant = participants.find(
+                        (p) => p.id === message.participantId
+                      )
+                      if (!participant) return null
+
+                      return (
+                        <MessageItem
+                          key={message.id}
+                          message={message}
+                          participant={participant}
+                        />
+                      )
+                    })}
+                  </div>
+                </ScrollArea>
               </CardContent>
             </Card>
           </div>

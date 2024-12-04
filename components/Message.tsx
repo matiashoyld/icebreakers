@@ -1,9 +1,14 @@
-import { Message, Participant } from '@/app/types/types'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 
 interface MessageItemProps {
-  message: Message
-  participant: Participant
+  message: {
+    id: number
+    content: string
+  }
+  participant: {
+    id: number
+    name: string
+  }
 }
 
 export function MessageItem({ message, participant }: MessageItemProps) {
@@ -11,7 +16,7 @@ export function MessageItem({ message, participant }: MessageItemProps) {
     <div className='flex items-start space-x-4 mb-4'>
       <Avatar className='h-10 w-10'>
         <AvatarImage
-          src={participant.avatar}
+          src={`/images/${participant.name.toLowerCase()}.gif`}
           alt={participant.name}
           className='object-cover'
         />
