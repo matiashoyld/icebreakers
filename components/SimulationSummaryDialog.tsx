@@ -207,7 +207,6 @@ export function SimulationSummaryDialog({
                       <TableHead>Name</TableHead>
                       <TableHead>Words Spoken</TableHead>
                       <TableHead>Number of Interactions</TableHead>
-                      <TableHead>Times Inactive</TableHead>
                       <TableHead>Camera Toggles</TableHead>
                       <TableHead>Satisfaction</TableHead>
                     </TableRow>
@@ -234,9 +233,8 @@ export function SimulationSummaryDialog({
                           <TableCell>{participant.name}</TableCell>
                           <TableCell>{participant.wordsSpoken}</TableCell>
                           <TableCell>
-                            {Math.round(participant.participationRate * 100)}%
+                            {participant.numberOfInteractions}
                           </TableCell>
-                          <TableCell>{participant.timesDoingNothing}</TableCell>
                           <TableCell>{participant.cameraToggles}</TableCell>
                           <TableCell>
                             {satisfactionData ? (

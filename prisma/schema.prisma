@@ -19,18 +19,19 @@ model Simulation {
 }
 
 model SimulationParticipant {
-  id                  String      @id @default(cuid())
-  simulationId        String
-  simulation          Simulation  @relation(fields: [simulationId], references: [id])
-  participantId       Int
-  name                String
-  wordsSpoken         Int
-  cameraToggles       Int
-  timesDoingNothing   Int
-  participationRate   Float
-  satisfactionScore   Float?
+  id                    String      @id @default(cuid())
+  simulationId          String
+  simulation            Simulation  @relation(fields: [simulationId], references: [id])
+  participantId         Int
+  name                  String
+  wordsSpoken           Int
+  cameraToggles         Int
+  timesDoingNothing     Int
+  participationRate     Float
+  numberOfInteractions  Int
+  satisfactionScore     Float?
   satisfactionExplanation String?
-  turns               SimulationTurn[]
+  turns                 SimulationTurn[]
 
   @@index([simulationId])
 }

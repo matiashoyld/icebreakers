@@ -371,6 +371,7 @@ export default function BreakoutRoomSimulator() {
               updatedParticipant.cameraToggles++
             } else if (step.action === 'speak' && step.message) {
               updatedParticipant.wordsSpoken += step.message.split(' ').length
+              updatedParticipant.numberOfInteractions++
             } else if (step.action === 'doNothing') {
               updatedParticipant.timesDoingNothing++
             }

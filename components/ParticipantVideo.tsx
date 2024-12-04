@@ -1,3 +1,4 @@
+import { CAMERA_TOGGLE_THRESHOLD } from '@/app/constants/constants'
 import { Participant } from '@/app/types/types'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { CameraOff } from 'lucide-react'
@@ -15,6 +16,8 @@ export function ParticipantVideo({
   latestEngagement,
   engagementChartColor,
 }: ParticipantVideoProps) {
+  const isLowInterest = latestEngagement < CAMERA_TOGGLE_THRESHOLD
+
   return (
     <div className='relative'>
       <div
@@ -36,16 +39,22 @@ export function ParticipantVideo({
             </Avatar>
           </div>
         ) : (
-          <CameraOff
-            className='w-16 h-16 text-muted-foreground'
-            strokeWidth={1.5}
-          />
+          <div className='flex flex-col items-center'>
+            <CameraOff
+              className='w-16 h-16 text-muted-foreground'
+              strokeWidth={1.5}
+            />
+          </div>
         )}
       </div>
       <div className='absolute top-2 left-2 bg-background/80 px-2 py-1 rounded text-sm'>
         {participant.name}
       </div>
-      <div className='absolute top-2 right-2 bg-background/80 px-2 py-1 rounded text-sm'>
+      <div
+        className={`absolute top-2 right-2 bg-background/80 px-2 py-1 rounded text-sm ${
+          isLowInterest ? 'text-red-500' : ''
+        }`}
+      >
         Interest: {Math.round(latestEngagement)}%
       </div>
     </div>

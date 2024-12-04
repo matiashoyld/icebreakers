@@ -1,4 +1,7 @@
-import { MAX_SIMULATION_TURNS } from '@/app/constants/constants'
+import {
+  CAMERA_TOGGLE_THRESHOLD,
+  MAX_SIMULATION_TURNS,
+} from '@/app/constants/constants'
 import { salvageItems } from '@/app/data/data'
 import { Participant, SimulationStep } from '@/app/types/types'
 import { selectNextParticipant } from '@/lib/llm/interestScore'
@@ -91,6 +94,59 @@ export async function getNextSimulationStep(input: SimulationInput): Promise<{
   }
 
   const { scores } = await interestScoreResponse.json()
+
+  // After getting interest scores, check if any participants need camera updates
+  const participantsToUpdate = scores.filter((score) => {
+    const participant = input.participants.find(
+      (p) => p.id === score.participantId
+    )
+    if (!participant) return false
+
+    // Check if camera should be turned off (score below threshold and camera is on)
+    if (score.score < CAMERA_TOGGLE_THRESHOLD && participant.cameraOn) {
+      return true
+    }
+    // Check if camera should be turned on (score above threshold and camera is off)
+    if (score.score >= CAMERA_TOGGLE_THRESHOLD && !participant.cameraOn) {
+      return true
+    }
+    return false
+  })
+
+  // If any participant needs their camera toggled, handle it before the regular turn
+  if (participantsToUpdate.length > 0) {
+    const participantToUpdate = participantsToUpdate[0]
+    const participant = input.participants.find(
+      (p) => p.id === participantToUpdate.participantId
+    )!
+
+    const step: SimulationStep = {
+      participantId: participant.id,
+      action: 'toggleCamera',
+      message: `${participant.name} ${
+        participant.cameraOn ? 'turned off' : 'turned on'
+      } their camera due to their interest level ${
+        participant.cameraOn ? 'dropping below' : 'rising above'
+      } ${CAMERA_TOGGLE_THRESHOLD}%`,
+      thinking: `My interest level is ${participantToUpdate.score}%, which is ${
+        participant.cameraOn ? 'below' : 'above'
+      } the threshold of ${CAMERA_TOGGLE_THRESHOLD}%. I should ${
+        participant.cameraOn ? 'turn off' : 'turn on'
+      } my camera.`,
+      prompt: '',
+      rankingChanges: [],
+    }
+
+    return {
+      step,
+      nextParticipantId: participant.id,
+      endCondition: checkSimulationEnd(
+        input.currentTurn + 1,
+        input.recentChanges || []
+      ),
+      interestScores: scores,
+    }
+  }
 
   // Get conversation history in the correct format
   const conversationHistory = input.dialogueHistory.map((msg, index) => ({
