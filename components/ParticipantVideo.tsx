@@ -46,7 +46,7 @@ export function ParticipantVideo({
         {participant.name}
       </div>
       <div className='absolute top-2 right-2 bg-background/80 px-2 py-1 rounded text-sm'>
-        Engagement: {latestEngagement}%
+        Interest: {Math.round(latestEngagement)}%
       </div>
     </div>
   )

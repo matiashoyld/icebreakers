@@ -1,25 +1,40 @@
+import {
+  InterestScoreResponse,
+  Participant,
+  ParticipantInterestScore,
+  SimulationStep,
+} from '@/app/types/types'
+import { countWords, estimateTokens } from '@/lib/utils/text-utils'
 import OpenAI from 'openai'
 import { generatePrompt } from './openai'
 import { interestScorePrompt } from './prompts/prompts'
-import { Participant, InterestScoreResponse, ParticipantInterestScore, SimulationStep } from '@/app/types/types'
-import { countWords, estimateTokens } from '@/lib/utils/text-utils'
 
 /**
- * Cleans a string that might contain a JSON object with markdown formatting
+ * Calculates how many turns ago a participant last spoke
  */
-function cleanJsonResponse(response: string): string {
-  // Remove markdown code block syntax if present
-  response = response.replace(/```json\n?/g, '').replace(/```\n?/g, '')
-  
-  // Find the first '{' and last '}' to extract the JSON object
-  const startIndex = response.indexOf('{')
-  const endIndex = response.lastIndexOf('}')
-  
-  if (startIndex === -1 || endIndex === -1) {
-    throw new Error('No valid JSON object found in response')
+function calculateTurnsSinceLastSpoke(
+  participantId: number,
+  conversationHistory: SimulationStep[]
+): number {
+  for (let i = conversationHistory.length - 1; i >= 0; i--) {
+    if (conversationHistory[i].participantId === participantId) {
+      return conversationHistory.length - 1 - i
+    }
   }
-  
-  return response.slice(startIndex, endIndex + 1)
+  return conversationHistory.length // Never spoke
+}
+
+/**
+ * Gets the speaking frequency of a participant
+ */
+function calculateSpeakingFrequency(
+  participantId: number,
+  conversationHistory: SimulationStep[]
+): number {
+  const speakingTurns = conversationHistory.filter(
+    (turn) => turn.participantId === participantId
+  ).length
+  return speakingTurns / Math.max(1, conversationHistory.length)
 }
 
 /**
@@ -33,18 +48,20 @@ export async function calculateInterestScores(
   openai: OpenAI
 ): Promise<ParticipantInterestScore[]> {
   console.log('\n=== Calculating Interest Scores ===')
-  
+
   // Calculate all scores in parallel
   const scorePromises = participants.map(async (participant) => {
-    console.log(`\nProcessing Participant ${participant.id} (${participant.name}):`)
-    
+    console.log(
+      `\nProcessing Participant ${participant.id} (${participant.name}):`
+    )
+
     const prompt = await generatePrompt(
       [
         participant.agentDescription,
         JSON.stringify(participants),
         JSON.stringify(conversationHistory),
         JSON.stringify(currentRanking),
-        currentTurn.toString()
+        currentTurn.toString(),
       ],
       interestScorePrompt()
     )
@@ -60,7 +77,7 @@ export async function calculateInterestScores(
       model: 'gpt-3.5-turbo',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.7,
-      max_tokens: 2048  // Allow for larger responses while leaving room for the prompt
+      max_tokens: 2048, // Allow for larger responses while leaving room for the prompt
     })
 
     const responseContent = completion.choices[0].message?.content || '{}'
@@ -75,7 +92,10 @@ export async function calculateInterestScores(
       const response = JSON.parse(cleanedResponse) as InterestScoreResponse
 
       // Validate the required fields
-      if (typeof response.interestScore !== 'number' || typeof response.reasoning !== 'string') {
+      if (
+        typeof response.interestScore !== 'number' ||
+        typeof response.reasoning !== 'string'
+      ) {
         throw new Error('Invalid response format: missing required fields')
       }
 
@@ -86,7 +106,7 @@ export async function calculateInterestScores(
       return {
         participantId: participant.id,
         score: response.interestScore,
-        reasoning: response.reasoning
+        reasoning: response.reasoning,
       }
     } catch (error) {
       console.error('Error parsing response:', error)
@@ -94,7 +114,7 @@ export async function calculateInterestScores(
       return {
         participantId: participant.id,
         score: 50, // default middle score
-        reasoning: 'Error parsing response'
+        reasoning: 'Error parsing response',
       }
     }
   })
@@ -107,17 +127,99 @@ export async function calculateInterestScores(
 }
 
 /**
- * Determines the next participant based on interest scores
+ * Determines the next participant based on interest scores and turn recency
  */
-export function selectNextParticipant(scores: ParticipantInterestScore[]): number {
+export function selectNextParticipant(
+  scores: ParticipantInterestScore[],
+  conversationHistory: SimulationStep[]
+): number {
   if (scores.length === 0) {
     throw new Error('No participants to select from')
   }
 
-  // Find the participant with the highest score
-  const highestScore = scores.reduce((prev, current) => {
-    return prev.score > current.score ? prev : current
-  })
+  // Find the highest score
+  const maxScore = Math.max(...scores.map((s) => s.score))
 
-  return highestScore.participantId
+  // Get all participants with the highest score
+  const topParticipants = scores.filter((s) => s.score === maxScore)
+
+  if (topParticipants.length === 1) {
+    // If there's only one top participant, select them
+    return topParticipants[0].participantId
+  }
+
+  // If there are multiple participants with the same top score,
+  // select the one who hasn't spoken in the longest time
+  return topParticipants.reduce((leastRecent, current) => {
+    const leastRecentLastTurn = conversationHistory
+      .slice()
+      .reverse()
+      .findIndex((turn) => turn.participantId === leastRecent.participantId)
+
+    const currentLastTurn = conversationHistory
+      .slice()
+      .reverse()
+      .findIndex((turn) => turn.participantId === current.participantId)
+
+    // If participant hasn't spoken yet, they get priority
+    if (leastRecentLastTurn === -1) return leastRecent
+    if (currentLastTurn === -1) return current
+
+    // Return the participant who spoke less recently
+    return leastRecentLastTurn > currentLastTurn ? current : leastRecent
+  }).participantId
+}
+
+/**
+ * Calculates engagement score for a participant
+ */
+export function getEngagementScore(
+  participantId: number,
+  conversationHistory: SimulationStep[],
+  currentInterestScore: number
+): number {
+  const turnsSinceLastSpoke = calculateTurnsSinceLastSpoke(
+    participantId,
+    conversationHistory
+  )
+  const speakingFrequency = calculateSpeakingFrequency(
+    participantId,
+    conversationHistory
+  )
+
+  // Base the engagement score on multiple factors
+  const baseScore = currentInterestScore
+  const recencyBonus = Math.max(0, 20 - turnsSinceLastSpoke * 2) // Up to 20 points bonus for recent participation
+  const frequencyFactor = speakingFrequency * 10 // Up to 10 points based on overall participation
+
+  // Combine factors with weights
+  const engagementScore = Math.min(
+    100,
+    Math.max(
+      0,
+      baseScore * 0.7 + // Interest score has highest weight
+        recencyBonus * 0.2 + // Recency has medium weight
+        frequencyFactor * 0.1 // Frequency has lowest weight
+    )
+  )
+
+  return Math.round(engagementScore)
+}
+
+/**
+ * Cleans a string that might contain a JSON object with markdown formatting
+ */
+function cleanJsonResponse(response: string): string {
+  // Remove markdown code block syntax if present
+  response = response.replace(/```json\n?/g, '').replace(/```\n?/g, '')
+
+  // Find the first '{' and last '}' to extract the JSON object
+  const startIndex = response.indexOf('{')
+  const endIndex = response.lastIndexOf('}')
+
+  if (startIndex === -1 || endIndex === -1) {
+    throw new Error('No valid JSON object found in response')
+  }
+
+  return response.slice(startIndex, endIndex + 1)
 }
