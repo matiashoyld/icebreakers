@@ -16,7 +16,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 type Participant = {
   id: number
@@ -40,16 +39,11 @@ type SimulationSummaryDialogProps = {
     realRank: number
   }[]
   totalTurns: number
-  simulationType: string
-  satisfactionScores?: {
-    participantId: number
-    score: number
-    explanation: string
-  }[]
+  simulationType: 'baseline' | 'leadership' | 'social' | 'gamification'
 }
 
 function getTypeStyles(
-  type: string
+  type: 'baseline' | 'leadership' | 'social' | 'gamification'
 ): string {
   switch (type) {
     case 'baseline':
@@ -72,7 +66,6 @@ export function SimulationSummaryDialog({
   finalRanking,
   totalTurns,
   simulationType,
-  satisfactionScores = [],
 }: SimulationSummaryDialogProps) {
   const averageWordsSpoken =
     participants.reduce((sum, p) => sum + p.wordsSpoken, 0) /
@@ -200,50 +193,36 @@ export function SimulationSummaryDialog({
                       <TableHead>Number of Interactions</TableHead>
                       <TableHead>Times Inactive</TableHead>
                       <TableHead>Camera Toggles</TableHead>
-                      <TableHead>Satisfaction</TableHead>
+                      <TableHead>Participation Rate</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {participants.map((participant) => {
-                      const satisfactionData = satisfactionScores.find(
-                        (s) => s.participantId === participant.id
-                      )
-                      return (
-                        <TableRow key={participant.id}>
-                          <TableCell>
-                            <Avatar>
-                              <AvatarImage src={`/agents/${participant.id}.png`} />
-                              <AvatarFallback>
-                                {participant.name[0]}
-                              </AvatarFallback>
-                            </Avatar>
-                          </TableCell>
-                          <TableCell>{participant.name}</TableCell>
-                          <TableCell>{participant.wordsSpoken}</TableCell>
-                          <TableCell>
-                            {Math.round(participant.participationRate * 100)}%
-                          </TableCell>
-                          <TableCell>{participant.timesDoingNothing}</TableCell>
-                          <TableCell>{participant.cameraToggles}</TableCell>
-                          <TableCell>
-                            {satisfactionData ? (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <span className="cursor-help">
-                                    {satisfactionData.score}/10
-                                  </span>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p className="max-w-xs">{satisfactionData.explanation}</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            ) : (
-                              'N/A'
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      )
-                    })}
+                    {participants.map((participant) => (
+                      <TableRow key={participant.id}>
+                        <TableCell>
+                          <Avatar className='h-8 w-8'>
+                            <AvatarImage
+                              src={participant.avatar}
+                              alt={`${participant.name}'s avatar`}
+                              className='object-cover'
+                            />
+                            <AvatarFallback>
+                              {participant.name[0]}
+                            </AvatarFallback>
+                          </Avatar>
+                        </TableCell>
+                        <TableCell>{participant.name}</TableCell>
+                        <TableCell>{participant.wordsSpoken}</TableCell>
+                        <TableCell>
+                          {participant.numberOfInteractions}
+                        </TableCell>
+                        <TableCell>{participant.timesDoingNothing}</TableCell>
+                        <TableCell>{participant.cameraToggles}</TableCell>
+                        <TableCell>
+                          {(participant.participationRate * 100).toFixed(1)}%
+                        </TableCell>
+                      </TableRow>
+                    ))}
                   </TableBody>
                 </Table>
               </CardContent>
