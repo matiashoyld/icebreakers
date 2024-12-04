@@ -69,6 +69,20 @@ export async function getNextSimulationStep(input: SimulationInput): Promise<{
   interestScores: { participantId: number; score: number }[]
 }> {
   // Calculate interest scores using the API endpoint
+  const leaderId =
+    input.scenario.id === 'leadership'
+      ? getOrSetLeader(input.participants)
+      : undefined
+
+  console.log('\n=== Leadership Debug in Simulation Manager ===')
+  console.log('- Scenario Type:', input.scenario.id)
+  console.log('- Leader ID:', leaderId)
+  console.log(
+    '- Participants:',
+    input.participants.map((p) => `${p.name} (ID: ${p.id})`)
+  )
+  console.log('=== End Leadership Debug ===\n')
+
   const interestScoreResponse = await fetch('/api/interest-scores', {
     method: 'POST',
     headers: {
@@ -86,6 +100,8 @@ export async function getNextSimulationStep(input: SimulationInput): Promise<{
       currentRanking: input.currentRanking.map((item) => item.name),
       currentTurn: input.currentTurn,
       interestHistory: input.interestHistory,
+      scenarioType: input.scenario.id,
+      leaderId, // Pass the extracted leaderId
     }),
   })
 

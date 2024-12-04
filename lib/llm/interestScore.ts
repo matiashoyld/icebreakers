@@ -54,7 +54,8 @@ export async function calculateInterestScores(
     turn: number
     score: number
     participantId: number
-  }>
+  }>,
+  scenarioContext: string
 ): Promise<ParticipantInterestScore[]> {
   console.log('\n=== Calculating Interest Scores ===')
 
@@ -121,7 +122,8 @@ ${unrankedItems.length > 0 ? `Still not ranked:\n${unrankedItems}` : ''}`
       modifiedDialogueHistory,
       currentRankingText,
       currentTurn.toString(),
-      finalFormattedHistory, // Add interest history as new input
+      finalFormattedHistory,
+      scenarioContext,
     ]
 
     const prompt = await generatePrompt(promptInputs, interestScorePrompt())
@@ -232,7 +234,7 @@ export function selectNextParticipant(
 
     // Otherwise, select the one who spoke less recently
     return currentLastTurn < bestCandidateLastTurn ? current : bestCandidate
-  }).participantId
+  }, topParticipants[0]).participantId
 }
 
 /**

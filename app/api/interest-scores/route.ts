@@ -1,4 +1,6 @@
+import { Participant, ParticipantInterestScore } from '@/app/types/types'
 import { calculateInterestScores } from '@/lib/llm/interestScore'
+import { getScenarioContext } from '@/lib/llm/prompts/prompts'
 import { NextResponse } from 'next/server'
 import OpenAI from 'openai'
 
@@ -28,33 +30,64 @@ export async function POST(request: Request) {
       currentRanking,
       currentTurn,
       interestHistory,
+      scenarioType,
+      leaderId,
     } = body
 
-    console.log('\nInput Data:')
-    console.log('- Participants:', participants.length)
-    console.log('- Current Turn:', currentTurn)
-    console.log('- Conversation History Length:', conversationHistory.length)
-    console.log('- Current Ranking Items:', currentRanking.length)
-    console.log('- Interest History Entries:', interestHistory.length)
+    console.log('\n=== Leadership Context in Interest Scores API ===')
+    console.log('- Scenario Type:', scenarioType)
+    console.log('- Leader ID:', leaderId)
+    console.log(
+      '- Participants:',
+      participants.map((p: Participant) => `${p.name} (ID: ${p.id})`)
+    )
 
-    const scores = await calculateInterestScores(
-      participants,
-      conversationHistory,
-      currentRanking,
-      currentTurn,
-      openai,
-      interestHistory
+    const scores = await Promise.all(
+      participants.map(async (participant: Participant) => {
+        console.log(`\n--- Processing ${participant.name} ---`)
+        console.log('- Participant ID:', participant.id)
+        console.log('- Is Leader:', participant.id === leaderId ? 'YES' : 'NO')
+
+        const scenarioContext = getScenarioContext(
+          scenarioType,
+          participant.id,
+          leaderId
+        )
+
+        console.log('- Generated Context:', scenarioContext)
+        console.log('------------------------')
+
+        const participantScores = await calculateInterestScores(
+          participants,
+          conversationHistory,
+          currentRanking,
+          currentTurn,
+          openai,
+          interestHistory,
+          scenarioContext
+        )
+
+        // Return just this participant's score
+        return participantScores.find(
+          (score) => score.participantId === participant.id
+        )!
+      })
+    )
+
+    // Filter out any undefined scores
+    const validScores = scores.filter(
+      (score): score is ParticipantInterestScore => score !== undefined
     )
 
     console.log('\nCalculated Scores:')
-    scores.forEach((score) => {
+    validScores.forEach((score) => {
       console.log(
         `Participant ${score.participantId}: ${score.score} (${score.reasoning})`
       )
     })
     console.log('=== End Interest Scores API Call ===\n')
 
-    return NextResponse.json({ scores })
+    return NextResponse.json({ scores: validScores })
   } catch (error) {
     console.error('Error calculating interest scores:', error)
     return NextResponse.json(

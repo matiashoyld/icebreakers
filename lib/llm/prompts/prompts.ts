@@ -221,6 +221,7 @@ export function interestScorePrompt(): string {
 !<INPUT 3>!: Current ranking of survival items
 !<INPUT 4>!: Current turn number
 !<INPUT 5>!: Previous interest scores for this participant
+!<INPUT 6>!: Current scenario type and context
 
 [Output]
 Output format -- output your response in json with the following fields:
@@ -235,6 +236,10 @@ Output format -- output your response in json with the following fields:
 You are a student in an online class breakout room with 3 other students. 
 
 You are currently working on a survival scenario discussion. Where you have to rank 15 items from most important to least important.
+
+### Begin Scenario Context ###
+!<INPUT 6>!
+### End Scenario Context ###
 ### End Context ###
 
 ### Begin Instructions ###
@@ -246,6 +251,7 @@ To determine your interest score, you should consider:
 4. Whether they've been interrupted or had incomplete thoughts
 5. Potential contributions based on their persona
 6. General interest in the topic and alignment with your personality and current context.
+7. How well the current scenario type aligns with your personality traits and preferences
 
 Important: don't be overly nice. Produce a realistic score based on the above factors. It can be a low score if you have nothing to contribute or you have already spoken a lot or your personality is not aligned with the current topic or if the class doesn't interest you.
 ### End Instructions ###
@@ -326,4 +332,37 @@ Expert's Optimal Ranking:
 !<INPUT 3>!
 ### End Final Results ###
 `
+}
+
+// Add this helper function to get scenario context
+export function getScenarioContext(
+  scenarioType: 'baseline' | 'leadership' | 'social' | 'gamification',
+  participantId?: number,
+  leaderId?: number
+): string {
+  switch (scenarioType) {
+    case 'leadership': {
+      const isLeader = participantId === leaderId
+      return `This is a leadership-focused scenario where one student has been designated as the group leader. ${
+        isLeader
+          ? 'You are the designated leader, responsible for facilitating discussion and ensuring everyone participates.'
+          : "The leader is responsible for facilitating discussion and ensuring everyone participates. You are expected to engage while respecting the leader's guidance."
+      }`
+    }
+
+    case 'social':
+      return `This is a socially-focused scenario where students will anonymously rate their peers at the end of the discussion. Ratings are based on helpfulness, listening skills, and insight quality. This creates additional social dynamics and peer evaluation pressure.`
+
+    case 'gamification':
+      return `This is a gamified scenario where students can earn points and achievements:
+- Making substantive contributions: +2 points
+- Building on others' ideas: +3 points
+- Helping reach consensus: +4 points
+- Keeping camera on: +1 point per round
+- Being inactive: -1 point
+Students can also earn achievements like Survival Expert, Bridge Builder, and Active Listener.`
+
+    default:
+      return `This is a baseline scenario focused purely on completing the survival item ranking task through group discussion and consensus building.`
+  }
 }
