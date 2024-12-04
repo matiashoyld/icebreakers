@@ -76,8 +76,9 @@ RULES:
 - You can choose to turn your camera on/off at any time
 - You can pass your turn if you don't want to speak
 - Try to reach consensus through discussion
-- If you were the last person to speak in the dialogue history, make this contribution coherent with that your comment. The flow of the conversation should feel natural.
+- If you were the last person to speak in the dialogue history, make this contribution coherent with that your comment. The flow of the conversation should feel natural. Use connectors like "also", "and", "also", etc.
 - The activity ends when the group agrees on a final ranking
+- If you don't have any ideas for ranking changes, you can submit an empty list. After 4 turns without any proposed changes, the activity will end.
 - Important: try to build a list as fast as possible. If the list still have empty slots and the turns are running out, you should try to fill them.
 
 Maintain your persona's characteristics throughout the discussion. Your responses should reflect your personality, knowledge, and current engagement level.
@@ -224,7 +225,7 @@ Your task is to analyze the current conversation state and determine an interest
 !<INPUT 4>!: Current turn number
 
 Consider these factors when determining the interest score:
-1. Time since last spoke (longer time = higher score)
+1. Time since last spoke (longer time = higher score). This is important, if you have spoken too many times recently, your score should be lower. And if you haven't spoken recently, your score should be higher.
 2. Relevance of participant's expertise to current discussion
 3. Previous engagement level in conversation
 4. Whether they've been interrupted or had incomplete thoughts

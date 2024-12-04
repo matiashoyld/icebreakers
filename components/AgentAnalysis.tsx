@@ -12,7 +12,7 @@ import {
   MessageSquare,
   PlusIcon,
 } from 'lucide-react'
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 interface AgentAnalysisProps {
   currentAgent: Participant | null
@@ -205,6 +205,14 @@ function ProposedChanges({
   )
 }
 
+interface DataPoint {
+  turn: number
+  score: number
+  participantId: number
+  x: number
+  y: number
+}
+
 function InterestChart({
   data,
   agentId,
@@ -217,6 +225,56 @@ function InterestChart({
   agentId: number
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const [hoveredPoint, setHoveredPoint] = useState<DataPoint | null>(null)
+
+  const handleMouseMove = useCallback(
+    (event: React.MouseEvent<HTMLCanvasElement>) => {
+      const canvas = canvasRef.current
+      if (!canvas) return
+
+      const rect = canvas.getBoundingClientRect()
+      const x = event.clientX - rect.left
+      const y = event.clientY - rect.top
+
+      const scaleX = canvas.width / rect.width
+      const scaleY = canvas.height / rect.height
+      const mouseX = x * scaleX
+      const mouseY = y * scaleY
+
+      const filteredData = data
+        .filter((d) => d.participantId === agentId)
+        .map((point, index) => {
+          const padding = {
+            left: 30,
+            right: 30,
+            top: 10,
+            bottom: 25,
+          }
+          const chartWidth = canvas.width - padding.left - padding.right
+          const chartHeight = canvas.height - padding.top - padding.bottom
+          const xStep =
+            chartWidth /
+            (data.filter((d) => d.participantId === agentId).length - 1 || 1)
+          const yStep = chartHeight / 100
+
+          return {
+            ...point,
+            x: (padding.left + index * xStep) * 2,
+            y: (padding.top + (chartHeight - point.score * yStep)) * 2,
+          }
+        })
+
+      const closest = filteredData.reduce((prev, curr) => {
+        const prevDist = Math.hypot(prev.x - mouseX, prev.y - mouseY)
+        const currDist = Math.hypot(curr.x - mouseX, curr.y - mouseY)
+        return currDist < prevDist ? curr : prev
+      })
+
+      const distance = Math.hypot(closest.x - mouseX, closest.y - mouseY)
+      setHoveredPoint(distance < 40 ? closest : null)
+    },
+    [data, agentId]
+  )
 
   useEffect(() => {
     if (canvasRef.current) {
@@ -325,16 +383,43 @@ function InterestChart({
               )
             }
           })
+
+          // Draw points
+          points.forEach((point) => {
+            ctx.beginPath()
+            ctx.arc(point.x, point.y, 4, 0, 2 * Math.PI)
+            ctx.fillStyle = '#8884d8'
+            ctx.fill()
+            ctx.strokeStyle = 'white'
+            ctx.lineWidth = 2
+            ctx.stroke()
+          })
         }
       }
     }
   }, [data, agentId])
 
   return (
-    <canvas
-      ref={canvasRef}
-      className='w-full h-full'
-      style={{ maxHeight: '100%' }}
-    />
+    <div className='relative w-full h-full'>
+      <canvas
+        ref={canvasRef}
+        className='w-full h-full'
+        style={{ maxHeight: '100%' }}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={() => setHoveredPoint(null)}
+      />
+      {hoveredPoint && (
+        <div
+          className='absolute bg-black/75 text-white px-2 py-1 rounded text-sm pointer-events-none'
+          style={{
+            left: `${hoveredPoint.x / 2}px`,
+            top: `${hoveredPoint.y / 2 - 30}px`,
+            transform: 'translateX(-50%)',
+          }}
+        >
+          Turn {hoveredPoint.turn}: {hoveredPoint.score}%
+        </div>
+      )}
+    </div>
   )
 }
