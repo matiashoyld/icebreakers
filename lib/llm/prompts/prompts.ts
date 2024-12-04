@@ -214,24 +214,54 @@ Remember that having a designated leader doesn't mean you should be passive - yo
 }
 
 export function interestScorePrompt(): string {
-  return `You are an expert at analyzing conversations and determining how interested a participant would be in speaking next.
-Your task is to analyze the current conversation state and determine an interest score (0-100) for a specific participant.
-
-[Input]
+  return `[Input]
 !<INPUT 0>!: Information about the participant being scored
 !<INPUT 1>!: Context of the conversation (all participants, camera status)
 !<INPUT 2>!: Dialogue history
 !<INPUT 3>!: Current ranking of survival items
 !<INPUT 4>!: Current turn number
 
-Consider these factors when determining the interest score:
+[Output]
+Output format -- output your response in json with the following fields:
+{
+  "interestScore": number (0-100),
+  "reasoning": "detailed explanation of why this score was given"
+}
+
+<commentblockmarker>###</commentblockmarker>
+
+### Begin Context ###
+You are a student in an online class breakout room with 3 other students. 
+
+You are currently working on a survival scenario discussion. Where you have to rank 15 items from most important to least important.
+### End Context ###
+
+### Begin Instructions ###
+Your task is to analyze the current conversation state and determine your interest score (0-100). This interest score will be used to determine how likely you are to speak next.
+To determine your interest score, you should consider:
 1. Time since last spoke (longer time = higher score). This is important, if you have spoken too many times recently, your score should be lower. And if you haven't spoken recently, your score should be higher.
 2. Relevance of participant's expertise to current discussion
 3. Previous engagement level in conversation
 4. Whether they've been interrupted or had incomplete thoughts
 5. Potential contributions based on their persona
+### End Instructions ###
 
-[Output]
+### Begin Participant Description ###
+!<INPUT 0>!
+### End Participant Description ###
+
+### Begin Conversation Context ###
+!<INPUT 1>!
+### End Conversation Context ###
+
+### Begin Dialogue History ###
+!<INPUT 2>!
+### End Dialogue History ###
+
+### Begin Current Ranking ###
+!<INPUT 3>!
+### End Current Ranking ###
+
 Output format -- output your response in json with the following fields:
 {
   "interestScore": number (0-100),

@@ -1,14 +1,18 @@
+import { salvageItems } from '@/app/data/data'
 import {
   InterestScoreResponse,
   Participant,
   ParticipantInterestScore,
   SimulationStep,
 } from '@/app/types/types'
+import {
+  formatOtherParticipants,
+  formatParticipantInfo,
+} from '@/lib/utils/prompt-utils'
 import { countWords, estimateTokens } from '@/lib/utils/text-utils'
 import OpenAI from 'openai'
 import { generatePrompt } from './openai'
 import { interestScorePrompt } from './prompts/prompts'
-
 /**
  * Calculates how many turns ago a participant last spoke
  */
@@ -55,16 +59,55 @@ export async function calculateInterestScores(
       `\nProcessing Participant ${participant.id} (${participant.name}):`
     )
 
-    const prompt = await generatePrompt(
-      [
-        participant.agentDescription,
-        JSON.stringify(participants),
-        JSON.stringify(conversationHistory),
-        JSON.stringify(currentRanking),
-        currentTurn.toString(),
-      ],
-      interestScorePrompt()
-    )
+    // Format dialogue history similar to simulation-manager.ts
+    const modifiedDialogueHistory =
+      conversationHistory.length === 0
+        ? 'This is the start of the conversation, you are the first agent to speak.'
+        : conversationHistory
+            .map((step) => {
+              const speaker = participants.find(
+                (p) => p.id === step.participantId
+              )
+              const prefix = speaker?.id === participant.id ? ' (You)' : ''
+              return `${speaker?.name}${prefix}: ${step.message}`
+            })
+            .join('\n')
+
+    // Format current ranking similar to simulation-manager.ts
+    const currentRankingText = (() => {
+      if (currentRanking.length === 0) {
+        return 'No items have been ranked yet.'
+      }
+
+      // Get the ranked items text
+      const rankedItemsText = Array(15)
+        .fill(null)
+        .map((_, index) => {
+          const item = currentRanking[index]
+          return `${index + 1}. ${item || '-'}`
+        })
+        .join('\n')
+
+      // Get the unranked items
+      const unrankedItems = salvageItems
+        .filter((item) => !currentRanking.includes(item.name))
+        .map((item) => `- ${item.name}`)
+        .join('\n')
+
+      return `${rankedItemsText}
+
+${unrankedItems.length > 0 ? `Still not ranked:\n${unrankedItems}` : ''}`
+    })()
+
+    const promptInputs = [
+      formatParticipantInfo(participant),
+      formatOtherParticipants(participants, participant),
+      modifiedDialogueHistory,
+      currentRankingText,
+      currentTurn.toString(),
+    ]
+
+    const prompt = await generatePrompt(promptInputs, interestScorePrompt())
 
     console.log('\nGenerated Interest Score Prompt:')
     console.log('---START PROMPT---')

@@ -8,6 +8,10 @@ import {
   leadershipPrompt,
   socialPrompt,
 } from '@/lib/llm/prompts/prompts'
+import {
+  formatOtherParticipants,
+  formatParticipantInfo,
+} from '@/lib/utils/prompt-utils'
 
 export type SimulationContext = {
   participants: Participant[]
@@ -31,34 +35,6 @@ interface SimulationInput {
 export type SimulationEndCondition = {
   ended: boolean
   reason: 'max_turns' | 'no_changes' | null
-}
-
-function formatParticipantInfo(participant: Participant): string {
-  return `This is your description:
-Name: ${participant.name}
-Camera status: ${participant.cameraOn ? 'ON' : 'OFF'}
-Times you have toggled your camera: ${participant.cameraToggles}
-Speaking style: ${participant.speakingStyle}
-Agent description: ${participant.agentDescription}`
-}
-
-function formatOtherParticipants(
-  allParticipants: Participant[],
-  currentParticipant: Participant
-): string {
-  const otherParticipants = allParticipants.filter(
-    (p) => p.id !== currentParticipant.id
-  )
-
-  return `This is the current state of the other agents in the conversation:
-
-${otherParticipants
-  .map(
-    (p) => `${p.name}:
-- Camera Status: ${p.cameraOn ? 'ON' : 'OFF'}
-- Times this agent has toggled the camera: ${p.cameraToggles}`
-  )
-  .join('\n\n')}`
 }
 
 function checkSimulationEnd(
