@@ -27,12 +27,7 @@ import { Toaster } from '@/components/ui/toaster'
 // Data, Types, and Constants
 import { ENGAGEMENT_CHART_COLOR } from '@/app/constants/constants'
 import { initialParticipants, salvageItems } from '@/app/data/data'
-import {
-  EngagementData,
-  Message,
-  Participant,
-  SimulationStep,
-} from '@/app/types/types'
+import { Message, Participant, SimulationStep } from '@/app/types/types'
 import { getNextSimulationStep } from '@/lib/simulation/simulation-manager'
 
 type Change = {
@@ -51,7 +46,6 @@ export default function BreakoutRoomSimulator() {
   const [currentAgent, setCurrentAgent] = useState<Participant | null>(null)
   const [currentDecision, setCurrentDecision] = useState<string>('')
   const [isPlaying, setIsPlaying] = useState(false)
-  const [engagementData, setEngagementData] = useState<EngagementData[]>([])
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const [dialogueHistory, setDialogueHistory] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(false)
