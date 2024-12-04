@@ -192,6 +192,5 @@ export function selectNextParticipant(
     return lastA - lastB // Lower turn number (spoke longer ago) comes first
   })
 
-  // Return the participant ID directly from the sorted array
-  return sortedByLastSpoken[0].participantId
+  return highestScore.participantId
 }
