@@ -120,7 +120,7 @@ export default function BreakoutRoomSimulator() {
         const rankedPosition =
           itemRanking.findIndex((item) => item?.name === correctItem.name) + 1
 
-        if (rankedPosition !== -1) {
+        if (rankedPosition > 0) {
           // Item is ranked - difference between its current rank and real rank
           return Math.abs(rankedPosition - correctItem.realRank)
         } else {
