@@ -27,4 +27,3 @@ export async function callLLM(prompt: string): Promise<{ score: number }> {
 
   const data = await response.json();
   return { score: data.choices[0].message.content }; // Adjust according to your API response structure 
-}
