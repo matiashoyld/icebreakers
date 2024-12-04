@@ -24,11 +24,6 @@ export type SaveSimulationParams = {
   taskCompletionEffectiveness?: number
   postSessionSatisfactionScores?: number
   taskScore: number
-  satisfactionScores: {
-    participantId: number
-    score: number
-    explanation: string
-  }[]
 }
 
 export async function saveSimulation({
@@ -41,7 +36,6 @@ export async function saveSimulation({
   taskCompletionEffectiveness,
   postSessionSatisfactionScores,
   taskScore,
-  satisfactionScores,
 }: SaveSimulationParams) {
   return await prisma.$transaction(async (tx) => {
     const simulation = await tx.simulation.create({
@@ -58,11 +52,8 @@ export async function saveSimulation({
     })
 
     const createdParticipants = await Promise.all(
-      participants.map((p) => {
-        const satisfactionData = satisfactionScores.find(
-          (s) => s.participantId === p.id
-        )
-        return tx.simulationParticipant.create({
+      participants.map((p) =>
+        tx.simulationParticipant.create({
           data: {
             simulationId: simulation.id,
             participantId: p.id,
@@ -71,11 +62,9 @@ export async function saveSimulation({
             cameraToggles: p.cameraToggles,
             timesDoingNothing: p.timesDoingNothing,
             participationRate: p.participationRate,
-            satisfactionScore: satisfactionData?.score ?? null,
-            satisfactionExplanation: satisfactionData?.explanation ?? null,
           },
         })
-      })
+      )
     )
 
     const participantIdMap = new Map(

@@ -34,7 +34,6 @@ model SimulationParticipant {
   timesDoingNothing   Int
   participationRate   Float
   satisfactionScore   Float?
-  satisfactionExplanation String?
   turns               SimulationTurn[]
 
   @@index([simulationId])
