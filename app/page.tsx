@@ -117,13 +117,12 @@ export default function BreakoutRoomSimulator() {
       .fill(null)
       .map((_, index) => {
         const correctItem = salvageItems[index]
-        const rankedPosition = itemRanking.findIndex(
-          (item) => item?.name === correctItem.name
-        )
+        const rankedPosition =
+          itemRanking.findIndex((item) => item?.name === correctItem.name) + 1
 
         if (rankedPosition !== -1) {
           // Item is ranked - difference between its current rank and real rank
-          return Math.abs(rankedPosition + 1 - correctItem.realRank)
+          return Math.abs(rankedPosition - correctItem.realRank)
         } else {
           // Item is not ranked - difference is its real rank
           return correctItem.realRank
@@ -274,6 +273,7 @@ export default function BreakoutRoomSimulator() {
             .filter((item): item is (typeof salvageItems)[0] => item !== null),
           scenario: selectedScenario!,
           recentChanges,
+          interestHistory,
         })
 
       // Store the interest scores

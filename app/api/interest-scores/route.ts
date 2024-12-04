@@ -22,21 +22,28 @@ export async function POST(request: Request) {
 
     const openai = await getOpenAIClient()
     const body = await request.json()
-    const { participants, conversationHistory, currentRanking, currentTurn } =
-      body
+    const {
+      participants,
+      conversationHistory,
+      currentRanking,
+      currentTurn,
+      interestHistory,
+    } = body
 
     console.log('\nInput Data:')
     console.log('- Participants:', participants.length)
     console.log('- Current Turn:', currentTurn)
     console.log('- Conversation History Length:', conversationHistory.length)
     console.log('- Current Ranking Items:', currentRanking.length)
+    console.log('- Interest History Entries:', interestHistory.length)
 
     const scores = await calculateInterestScores(
       participants,
       conversationHistory,
       currentRanking,
       currentTurn,
-      openai
+      openai,
+      interestHistory
     )
 
     console.log('\nCalculated Scores:')

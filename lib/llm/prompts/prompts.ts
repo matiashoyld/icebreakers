@@ -220,6 +220,7 @@ export function interestScorePrompt(): string {
 !<INPUT 2>!: Dialogue history
 !<INPUT 3>!: Current ranking of survival items
 !<INPUT 4>!: Current turn number
+!<INPUT 5>!: Previous interest scores for this participant
 
 [Output]
 Output format -- output your response in json with the following fields:
@@ -244,6 +245,9 @@ To determine your interest score, you should consider:
 3. Previous engagement level in conversation
 4. Whether they've been interrupted or had incomplete thoughts
 5. Potential contributions based on their persona
+6. General interest in the topic and alignment with your personality and current context.
+
+Important: don't be overly nice. Produce a realistic score based on the above factors. It can be a low score if you have nothing to contribute or you have already spoken a lot or your personality is not aligned with the current topic or if the class doesn't interest you.
 ### End Instructions ###
 
 ### Begin Participant Description ###
@@ -261,6 +265,11 @@ To determine your interest score, you should consider:
 ### Begin Current Ranking ###
 !<INPUT 3>!
 ### End Current Ranking ###
+
+### Begin Interest Score History ###
+Previous interest scores for this participant:
+!<INPUT 5>!
+### End Interest Score History ###
 
 Output format -- output your response in json with the following fields:
 {

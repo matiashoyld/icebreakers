@@ -94,23 +94,23 @@ export function SimulationSummaryDialog({
     .fill(null)
     .map((_, index) => {
       const correctItem = salvageItems[index]
-      const rankedPosition = finalRanking.find(
+      const rankedItem = finalRanking.find(
         (item) => item.name === correctItem.name
       )
 
-      if (rankedPosition && rankedPosition.rank > 0) {
+      if (rankedItem && rankedItem.rank > 0) {
         return {
           name: correctItem.name,
           emoji: correctItem.emoji,
-          rank: rankedPosition.rank,
+          rank: rankedItem.rank,
           realRank: correctItem.realRank,
-          diff: Math.abs(rankedPosition.rank - correctItem.realRank),
+          diff: Math.abs(rankedItem.rank - correctItem.realRank),
         }
       } else {
         return {
           name: correctItem.name,
           emoji: correctItem.emoji,
-          rank: 0, // Will be displayed as '-'
+          rank: 0,
           realRank: correctItem.realRank,
           diff: correctItem.realRank,
         }

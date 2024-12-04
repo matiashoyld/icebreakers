@@ -49,7 +49,12 @@ export async function calculateInterestScores(
   conversationHistory: SimulationStep[],
   currentRanking: string[],
   currentTurn: number,
-  openai: OpenAI
+  openai: OpenAI,
+  interestHistory: Array<{
+    turn: number
+    score: number
+    participantId: number
+  }>
 ): Promise<ParticipantInterestScore[]> {
   console.log('\n=== Calculating Interest Scores ===')
 
@@ -99,12 +104,24 @@ export async function calculateInterestScores(
 ${unrankedItems.length > 0 ? `Still not ranked:\n${unrankedItems}` : ''}`
     })()
 
+    // Format interest history for the prompt
+    const formattedInterestHistory = interestHistory
+      .filter((entry) => entry.participantId === participant.id)
+      .map((entry) => `Turn ${entry.turn}: Score: ${entry.score}`)
+      .join('\n')
+
+    // If there's no history, add a note
+    const finalFormattedHistory =
+      formattedInterestHistory ||
+      'No previous interest scores for this participant.'
+
     const promptInputs = [
       formatParticipantInfo(participant),
       formatOtherParticipants(participants, participant),
       modifiedDialogueHistory,
       currentRankingText,
       currentTurn.toString(),
+      finalFormattedHistory, // Add interest history as new input
     ]
 
     const prompt = await generatePrompt(promptInputs, interestScorePrompt())

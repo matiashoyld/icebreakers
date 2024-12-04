@@ -30,6 +30,11 @@ interface SimulationInput {
     id: 'baseline' | 'leadership' | 'social' | 'gamification'
   }
   recentChanges?: boolean[]
+  interestHistory: Array<{
+    turn: number
+    score: number
+    participantId: number
+  }>
 }
 
 export type SimulationEndCondition = {
@@ -77,6 +82,7 @@ export async function getNextSimulationStep(input: SimulationInput): Promise<{
       })),
       currentRanking: input.currentRanking.map((item) => item.name),
       currentTurn: input.currentTurn,
+      interestHistory: input.interestHistory,
     }),
   })
 
