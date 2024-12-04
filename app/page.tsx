@@ -235,9 +235,18 @@ export default function BreakoutRoomSimulator() {
     return scores
   }, [participants, dialogueHistory, itemRanking])
 
-  // Add simulationSteps state
+  // Move this state declaration up, before handleNextStep
+  const [interestHistory, setInterestHistory] = useState<
+    Array<{
+      turn: number
+      score: number
+      participantId: number
+    }>
+  >([])
+
+  // Add this state to track interest score history
   const [simulationSteps, setSimulationSteps] = useState<SimulationStep[]>([])
-  // Modify handleNextStep to store interest scores
+
   const handleNextStep = useCallback(async () => {
     if (isLoading || isStepInProgress || simulationEnded) return
 
@@ -464,6 +473,8 @@ export default function BreakoutRoomSimulator() {
     saveSimulationData,
     calculateTaskScore,
     collectSatisfactionScores,
+    interestHistory,
+    simulationSteps,
   ])
 
   // Modify handlePlayPauseSimulation function
@@ -531,15 +542,6 @@ export default function BreakoutRoomSimulator() {
     const satisfactionScores = await collectSatisfactionScores()
     await saveSimulationData(score, satisfactionScores)
   }, [calculateTaskScore, saveSimulationData, collectSatisfactionScores])
-
-  // Add this state to track interest score history
-  const [interestHistory, setInterestHistory] = useState<
-    Array<{
-      turn: number
-      score: number
-      participantId: number
-    }>
-  >([])
 
   return (
     <div className='h-screen p-6'>

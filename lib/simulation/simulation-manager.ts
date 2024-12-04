@@ -96,22 +96,24 @@ export async function getNextSimulationStep(input: SimulationInput): Promise<{
   const { scores } = await interestScoreResponse.json()
 
   // After getting interest scores, check if any participants need camera updates
-  const participantsToUpdate = scores.filter((score) => {
-    const participant = input.participants.find(
-      (p) => p.id === score.participantId
-    )
-    if (!participant) return false
+  const participantsToUpdate = scores.filter(
+    (score: { participantId: number; score: number }) => {
+      const participant = input.participants.find(
+        (p) => p.id === score.participantId
+      )
+      if (!participant) return false
 
-    // Check if camera should be turned off (score below threshold and camera is on)
-    if (score.score < CAMERA_TOGGLE_THRESHOLD && participant.cameraOn) {
-      return true
+      // Check if camera should be turned off (score below threshold and camera is on)
+      if (score.score < CAMERA_TOGGLE_THRESHOLD && participant.cameraOn) {
+        return true
+      }
+      // Check if camera should be turned on (score above threshold and camera is off)
+      if (score.score >= CAMERA_TOGGLE_THRESHOLD && !participant.cameraOn) {
+        return true
+      }
+      return false
     }
-    // Check if camera should be turned on (score above threshold and camera is off)
-    if (score.score >= CAMERA_TOGGLE_THRESHOLD && !participant.cameraOn) {
-      return true
-    }
-    return false
-  })
+  )
 
   // If any participant needs their camera toggled, handle it before the regular turn
   if (participantsToUpdate.length > 0) {

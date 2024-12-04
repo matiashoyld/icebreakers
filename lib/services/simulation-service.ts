@@ -55,6 +55,7 @@ export async function saveSimulation({
             cameraToggles: p.cameraToggles,
             timesDoingNothing: p.timesDoingNothing,
             participationRate: p.participationRate,
+            numberOfInteractions: p.numberOfInteractions,
             satisfactionScore: satisfactionData?.score ?? null,
             satisfactionExplanation: satisfactionData?.explanation ?? null,
           },
