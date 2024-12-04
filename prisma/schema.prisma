@@ -14,11 +14,6 @@ model Simulation {
   simulationType  String    // 'baseline' | 'leadership' | 'social' | 'gamification'
   totalTurns      Int
   taskScore       Float?    // Optional score for the task completion
-  cameraActivationRate Float?    // camera activation rates
-  speakingTimeDistribution Float?    // speaking time distribution
-  qualityOfContributions Float?    // quality of contributions
-  taskCompletionEffectiveness Float? // task completion effectiveness
-  postSessionSatisfactionScores Float? // post-session satisfaction scores
   participants    SimulationParticipant[]
   turns           SimulationTurn[]
 }
@@ -34,6 +29,7 @@ model SimulationParticipant {
   timesDoingNothing   Int
   participationRate   Float
   satisfactionScore   Float?
+  satisfactionExplanation String?
   turns               SimulationTurn[]
 
   @@index([simulationId])

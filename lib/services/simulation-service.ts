@@ -17,42 +17,36 @@ export type SaveSimulationParams = {
   simulationType: 'baseline' | 'leadership' | 'social' | 'gamification'
   participants: Participant[]
   turns: SimulationTurn[]
-  cameraActivationRate?: number
-  speakingTimeDistribution?: number
-  qualityOfContributions?: number
-  taskCompletionEffectiveness?: number
-  postSessionSatisfactionScores?: number
   taskScore: number
+  satisfactionScores: {
+    participantId: number
+    score: number
+    explanation: string
+  }[]
 }
 
 export async function saveSimulation({
   simulationType,
   participants,
   turns,
-  cameraActivationRate,
-  speakingTimeDistribution,
-  qualityOfContributions,
-  taskCompletionEffectiveness,
-  postSessionSatisfactionScores,
   taskScore,
+  satisfactionScores,
 }: SaveSimulationParams) {
   return await prisma.$transaction(async (tx) => {
     const simulation = await tx.simulation.create({
       data: {
         simulationType,
         totalTurns: turns.length,
-        cameraActivationRate,
-        speakingTimeDistribution,
-        qualityOfContributions,
-        taskCompletionEffectiveness,
-        postSessionSatisfactionScores,
         taskScore,
       },
     })
 
     const createdParticipants = await Promise.all(
-      participants.map((p) =>
-        tx.simulationParticipant.create({
+      participants.map((p) => {
+        const satisfactionData = satisfactionScores.find(
+          (s) => s.participantId === p.id
+        )
+        return tx.simulationParticipant.create({
           data: {
             simulationId: simulation.id,
             participantId: p.id,
@@ -61,9 +55,11 @@ export async function saveSimulation({
             cameraToggles: p.cameraToggles,
             timesDoingNothing: p.timesDoingNothing,
             participationRate: p.participationRate,
+            satisfactionScore: satisfactionData?.score ?? null,
+            satisfactionExplanation: satisfactionData?.explanation ?? null,
           },
         })
-      )
+      })
     )
 
     const participantIdMap = new Map(
@@ -187,41 +183,4 @@ export async function deleteSimulation(id: string) {
       where: { id },
     })
   })
-}
-
-export async function calculateAverageMetrics() {
-  const simulations = await prisma.simulation.findMany({
-    select: {
-      cameraActivationRate: true,
-      speakingTimeDistribution: true,
-      qualityOfContributions: true,
-      taskCompletionEffectiveness: true,
-      postSessionSatisfactionScores: true,
-    },
-  })
-
-  const totalMetrics = simulations.reduce((acc, simulation) => {
-    acc.cameraActivationRate += simulation.cameraActivationRate || 0
-    acc.speakingTimeDistribution += simulation.speakingTimeDistribution || 0
-    acc.qualityOfContributions += simulation.qualityOfContributions || 0
-    acc.taskCompletionEffectiveness += simulation.taskCompletionEffectiveness || 0
-    acc.postSessionSatisfactionScores += simulation.postSessionSatisfactionScores || 0
-    return acc
-  }, {
-    cameraActivationRate: 0,
-    speakingTimeDistribution: 0,
-    qualityOfContributions: 0,
-    taskCompletionEffectiveness: 0,
-    postSessionSatisfactionScores: 0,
-  })
-
-  const averageMetrics = {
-    cameraActivationRate: totalMetrics.cameraActivationRate / simulations.length,
-    speakingTimeDistribution: totalMetrics.speakingTimeDistribution / simulations.length,
-    qualityOfContributions: totalMetrics.qualityOfContributions / simulations.length,
-    taskCompletionEffectiveness: totalMetrics.taskCompletionEffectiveness / simulations.length,
-    postSessionSatisfactionScores: totalMetrics.postSessionSatisfactionScores / simulations.length,
-  }
-
-  return averageMetrics
 }

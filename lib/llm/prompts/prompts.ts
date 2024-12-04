@@ -78,7 +78,6 @@ RULES:
 - Try to reach consensus through discussion
 - If you were the last person to speak in the dialogue history, make this contribution coherent with that your comment. The flow of the conversation should feel natural.
 - The activity ends when the group agrees on a final ranking
-- If you don't have any ideas for ranking changes, you can submit an empty list. After 4 turns that
 - Important: try to build a list as fast as possible. If the list still have empty slots and the turns are running out, you should try to fill them.
 
 Maintain your persona's characteristics throughout the discussion. Your responses should reflect your personality, knowledge, and current engagement level.
@@ -225,7 +224,7 @@ Your task is to analyze the current conversation state and determine an interest
 !<INPUT 4>!: Current turn number
 
 Consider these factors when determining the interest score:
-1. Time since last spoke (longer time = higher score). This is important, if you have spoken too many times recently, you should not be scored as highly. And if you haven't spoken recently, you should be scored more highly.
+1. Time since last spoke (longer time = higher score)
 2. Relevance of participant's expertise to current discussion
 3. Previous engagement level in conversation
 4. Whether they've been interrupted or had incomplete thoughts

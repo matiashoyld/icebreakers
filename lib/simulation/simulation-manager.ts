@@ -20,7 +20,6 @@ interface SimulationInput {
   participants: Participant[]
   currentTurn: number
   dialogueHistory: string[]
-  conversationHistory: SimulationStep[]
   currentRanking: typeof salvageItems
   scenario: {
     id: 'baseline' | 'leadership' | 'social' | 'gamification'
@@ -82,7 +81,6 @@ export async function getNextSimulationStep(input: SimulationInput): Promise<{
   step: SimulationStep
   nextParticipantId: number
   endCondition: SimulationEndCondition
-  interestScores: { participantId: number; score: number }[]
 }> {
   // Calculate interest scores using the API endpoint
   const interestScoreResponse = await fetch('/api/interest-scores', {
@@ -110,23 +108,8 @@ export async function getNextSimulationStep(input: SimulationInput): Promise<{
 
   const { scores } = await interestScoreResponse.json()
 
-  // Get conversation history in the correct format
-  const conversationHistory = input.dialogueHistory.map((msg, index) => ({
-    participantId: (index % input.participants.length) + 1,
-    action: 'speak' as const,
-    message: msg,
-    thinking: '',
-    prompt: '',
-  }))
-
-  // Add the current turn's history
-  const fullHistory = [
-    ...conversationHistory,
-    ...(input.conversationHistory || []), // Include any previous turns from this session
-  ]
-
-  // Select the next participant based on interest scores and conversation history
-  const nextParticipantId = selectNextParticipant(scores, fullHistory)
+  // Select the next participant based on interest scores
+  const nextParticipantId = selectNextParticipant(scores)
 
   const participant = input.participants.find((p) => p.id === nextParticipantId)
   if (!participant) throw new Error('Participant not found')
@@ -246,7 +229,6 @@ ${unrankedItems.length > 0 ? `Still not ranked:\n${unrankedItems}` : ''}`
     step,
     nextParticipantId,
     endCondition,
-    interestScores: scores,
   }
 }
 
