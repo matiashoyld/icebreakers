@@ -296,27 +296,9 @@ export default function BreakoutRoomSimulator() {
         })),
       ])
 
-      // Update recent changes
-      const hadChanges = step.rankingChanges && step.rankingChanges.length > 0
-      setRecentChanges((prev) =>
-        [...prev, hadChanges]
-          .slice(-4)
-          .filter((change): change is boolean => change !== undefined)
-      )
-
-      // Handle simulation end
-      if (endCondition.ended) {
-        setSimulationEnded(true)
-        setIsPlaying(false)
-        const score = calculateTaskScore()
-        const satisfactionScores = await collectSatisfactionScores()
-        await saveSimulationData(score, satisfactionScores)
-        setIsEndDialogOpen(true)
-      }
-
       // Process any ranking changes requested by the agent
       if (step.rankingChanges && step.rankingChanges.length > 0) {
-        const changes: Change[] = step.rankingChanges.map((change) => {
+        const changes = step.rankingChanges.map((change) => {
           const salvageItem = salvageItems.find((item) =>
             item.name.toLowerCase().includes(change.item.toLowerCase())
           )
@@ -366,8 +348,44 @@ export default function BreakoutRoomSimulator() {
         })
         setItemRanking(newRanking)
         setProposedChanges(changes)
+
+        // Update recent changes
+        const hadChanges = step.rankingChanges.length > 0
+        setRecentChanges((prev) =>
+          [...prev, hadChanges]
+            .slice(-4)
+            .filter((change): change is boolean => change !== undefined)
+        )
       } else {
         setProposedChanges([])
+        // Update recent changes for no-change turn
+        setRecentChanges((prev) =>
+          [...prev, false]
+            .slice(-4)
+            .filter((change): change is boolean => change !== undefined)
+        )
+      }
+
+      // Handle simulation end
+      if (endCondition.ended) {
+        setSimulationEnded(true)
+        setIsPlaying(false)
+
+        // Add a small delay to ensure final rankings are processed
+        await new Promise((resolve) => setTimeout(resolve, 100))
+
+        // Increment currentStep before calculating final values
+        const finalStep = currentStep + 1
+        const score = calculateTaskScore()
+        const satisfactionScores = await collectSatisfactionScores()
+        await saveSimulationData(score, satisfactionScores)
+
+        // Update step and open dialog
+        setCurrentStep(finalStep)
+        setIsEndDialogOpen(true)
+      } else {
+        // Normal step increment for non-ending turns
+        setCurrentStep((prev) => prev + 1)
       }
 
       // Update participants state
@@ -440,9 +458,6 @@ export default function BreakoutRoomSimulator() {
           prompt: step.prompt || '',
         },
       ])
-
-      // Increment step
-      setCurrentStep((prev) => prev + 1)
 
       // Add the step to simulation steps
       setSimulationSteps((prev) => [...prev, step])

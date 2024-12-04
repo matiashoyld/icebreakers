@@ -295,8 +295,14 @@ ${unrankedItems.length > 0 ? `Still not ranked:\n${unrankedItems}` : ''}`
     .slice(-4)
     .filter((change): change is boolean => change !== undefined)
 
-  // Check end conditions
+  // Check end conditions before updating state
   const endCondition = checkSimulationEnd(input.currentTurn + 1, recentChanges)
+
+  // If this is the final turn (MAX_SIMULATION_TURNS), handle it specially
+  if (endCondition.ended && endCondition.reason === 'max_turns') {
+    // Add a small delay to ensure state updates are processed
+    await new Promise((resolve) => setTimeout(resolve, 0))
+  }
 
   return {
     step,
