@@ -192,24 +192,29 @@ export function selectNextParticipant(
   }
 
   // If there are multiple participants with the same top score,
-  // select the one who hasn't spoken in the longest time
-  return topParticipants.reduce((leastRecent, current) => {
-    const leastRecentLastTurn = conversationHistory
-      .slice()
-      .reverse()
-      .findIndex((turn) => turn.participantId === leastRecent.participantId)
+  // select the one who hasn't spoken in the longest time or hasn't spoken at all
+  return topParticipants.reduce((bestCandidate, current) => {
+    // Find last turn for each participant
+    const bestCandidateLastTurn = conversationHistory
+      .map((turn) => turn.participantId)
+      .lastIndexOf(bestCandidate.participantId)
 
     const currentLastTurn = conversationHistory
-      .slice()
-      .reverse()
-      .findIndex((turn) => turn.participantId === current.participantId)
+      .map((turn) => turn.participantId)
+      .lastIndexOf(current.participantId)
 
-    // If participant hasn't spoken yet, they get priority
-    if (leastRecentLastTurn === -1) return leastRecent
-    if (currentLastTurn === -1) return current
+    // If current participant hasn't spoken yet (-1), prioritize them
+    if (currentLastTurn === -1) {
+      return current
+    }
 
-    // Return the participant who spoke less recently
-    return leastRecentLastTurn > currentLastTurn ? current : leastRecent
+    // If best candidate hasn't spoken yet, keep them
+    if (bestCandidateLastTurn === -1) {
+      return bestCandidate
+    }
+
+    // Otherwise, select the one who spoke less recently
+    return currentLastTurn < bestCandidateLastTurn ? current : bestCandidate
   }).participantId
 }
 

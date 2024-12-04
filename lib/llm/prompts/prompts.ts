@@ -110,7 +110,7 @@ Output your response in json with the following fields:
 {
 "thinking": "Explain your thought process and reasoning here",
 "action": "One of: toggleCamera, speak, or doNothing",
-"message": "If action is speak, include your message here. Otherwise null",
+"message": "If action is speak, include your message here. Otherwise null. It should be a coherent and natural response to the conversation.",
 "rankingChanges": [
     {
     "item": "Must match exactly one of the item names listed above",
